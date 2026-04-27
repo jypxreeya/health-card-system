@@ -11,7 +11,7 @@ const AppLayout = () => {
   const navigate = useNavigate();
 
   const topLinks = [
-    { name: 'Patient Portal', path: '/patient-dummy' },
+    { name: 'Patient Portal', path: '/patients' },
     { name: 'Sales App', path: '/sales-dummy' },
     { name: 'Hospital Panel', path: '/' },
   ];
@@ -19,7 +19,7 @@ const AppLayout = () => {
   const sideLinks = [
     { name: 'Dashboard', path: '/analytics', icon: <BarChart2 size={17} /> },
     { name: 'Hospital Panel', path: '/', icon: <LayoutGrid size={17} /> },
-    { name: 'Patient Portal', path: '/patient-dummy', icon: <UserCircle2 size={17} /> },
+    { name: 'Patient Portal', path: '/patients', icon: <UserCircle2 size={17} /> },
     { name: 'Sales App', path: '/sales-dummy', icon: <Briefcase size={17} /> },
   ];
 

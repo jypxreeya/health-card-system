@@ -20,14 +20,14 @@ const TabNavigator = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#e61d62',
-        tabBarInactiveTintColor: '#94a3b8',
+        tabBarActiveTintColor: '#0b57d0', // Google Blue
+        tabBarInactiveTintColor: '#444746',
         tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: '#f1f5f9',
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          borderTopWidth: 0,
+          backgroundColor: '#fff',
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 12,
         },
       }}
     >
@@ -35,14 +35,14 @@ const TabNavigator = () => {
         name="Home" 
         component={DashboardScreen} 
         options={{
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <Home color={color} size={24} />
         }}
       />
       <Tab.Screen 
         name="Register" 
         component={RegistrationScreen} 
         options={{
-          tabBarIcon: ({ color, size }) => <UserPlus color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <UserPlus color={color} size={24} />,
           tabBarButton: () => null, // Hide from tab bar, navigated to via button
         }}
       />
@@ -50,7 +50,7 @@ const TabNavigator = () => {
         name="History" 
         component={HistoryScreen} 
         options={{
-          tabBarIcon: ({ color, size }) => <History color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <History color={color} size={24} />
         }}
       />
     </Tab.Navigator>
@@ -62,8 +62,8 @@ const AppNavigator = () => {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#e61d62" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#0b57d0" />
       </View>
     );
   }

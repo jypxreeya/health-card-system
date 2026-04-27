@@ -79,71 +79,70 @@ const HistoryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fff',
   },
   header: {
     padding: 24,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#f1f3f4',
+    paddingTop: 12,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1f1f1f',
+    letterSpacing: -0.5,
   },
   listContainer: {
     padding: 16,
-    gap: 16,
+    gap: 12,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 2,
+    backgroundColor: '#F3F6FC', // M3 secondary container
+    borderRadius: 28, // M3 large rounding
+    padding: 20,
+    borderWidth: 0,
+    marginBottom: 4,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   patientName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontWeight: '700',
+    color: '#001d35',
   },
   phone: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#444746',
+    fontWeight: '500',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   statusActive: {
-    backgroundColor: '#dcfce7',
+    backgroundColor: '#c4eed0', // M3 positive container
   },
   statusInactive: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f1f3f4',
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    color: '#0f172a',
+    color: '#072711',
+    letterSpacing: 0.5,
   },
   divider: {
     height: 1,
-    backgroundColor: '#f1f5f9',
-    marginVertical: 12,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginVertical: 16,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -152,20 +151,21 @@ const styles = StyleSheet.create({
   footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   footerText: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#444746',
+    fontWeight: '600',
   },
   emptyContainer: {
     padding: 48,
     alignItems: 'center',
   },
   emptyText: {
-    color: '#64748b',
+    color: '#444746',
     fontSize: 16,
+    fontWeight: '500',
   },
 });
 

@@ -1,0 +1,13 @@
+{
+  "name": "health-card-system-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm run install:all",
+    "install:all": "npm --prefix backend install && npm --prefix admin-panel install && npm --prefix customer-portal install && npm --prefix field-app install",
+    "dev": "npx concurrently \"npm --prefix backend run dev\" \"npm --prefix admin-panel run dev\" \"npm --prefix customer-portal run dev\" \"npm --prefix field-app run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

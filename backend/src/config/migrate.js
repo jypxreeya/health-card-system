@@ -125,6 +125,9 @@ CREATE TABLE IF NOT EXISTS family_members (
   gender gender_type,
   phone VARCHAR(15),
   date_of_birth DATE,
+  address TEXT,
+  otp_code VARCHAR(10),
+  otp_expires_at TIMESTAMP,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -185,6 +188,7 @@ CREATE TABLE IF NOT EXISTS service_utilization (
 CREATE INDEX IF NOT EXISTS idx_service_patient ON service_utilization(patient_id);
 CREATE INDEX IF NOT EXISTS idx_service_hospital ON service_utilization(hospital_id);
 CREATE INDEX IF NOT EXISTS idx_service_date ON service_utilization(visit_date);
+CREATE INDEX IF NOT EXISTS idx_service_hospital_date ON service_utilization(hospital_id, visit_date);
 
 -- ─── Field Visits ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS field_visits (
@@ -241,6 +245,17 @@ CREATE TABLE IF NOT EXISTS service_categories (
   name VARCHAR(150) UNIQUE NOT NULL,
   description TEXT,
   is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ─── Audit Logs ─────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  action VARCHAR(255) NOT NULL,
+  entity VARCHAR(100) NOT NULL,
+  entity_id UUID,
+  details JSONB,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

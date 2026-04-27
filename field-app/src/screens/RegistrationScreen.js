@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../api/axios';
-import { CheckCircle, ChevronLeft } from 'lucide-react-native';
+import { CheckCircle, ChevronLeft, WifiOff } from 'lucide-react-native';
+import { useNetInfo } from '@react-native-community/netinfo';
+import * as storage from '../utils/storage';
+import { saveOfflinePatient } from '../api/database';
 
 const RegistrationScreen = ({ navigation }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState([]);
+  const [isOfflineSave, setIsOfflineSave] = useState(false);
+  const netInfo = useNetInfo();
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -23,10 +28,20 @@ const RegistrationScreen = ({ navigation }) => {
 
   const fetchPlans = async () => {
     try {
+      if (netInfo.isConnected === false) {
+        // Offline: try loading from cache
+        const cached = await storage.getItemAsync('cached_plans');
+        if (cached) setPlans(JSON.parse(cached));
+        return;
+      }
       const res = await api.get('/plans');
-      setPlans(res.data.data.filter(p => p.is_active));
+      const activePlans = res.data.data.filter(p => p.is_active);
+      setPlans(activePlans);
+      await storage.setItemAsync('cached_plans', JSON.stringify(activePlans));
     } catch (e) {
       console.log('Error fetching plans', e);
+      const cached = await storage.getItemAsync('cached_plans');
+      if (cached) setPlans(JSON.parse(cached));
     }
   };
 
@@ -37,11 +52,29 @@ const RegistrationScreen = ({ navigation }) => {
     }
 
     setLoading(true);
+    
+    // OFFLINE MODE handling
+    if (netInfo.isConnected === false) {
+      saveOfflinePatient(formData);
+      setIsOfflineSave(true);
+      setStep(3);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await api.post('/patients', formData);
+      setIsOfflineSave(false);
       setStep(3); // Success step
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Registration failed');
+      // If network fails unexpectedly despite netInfo saying it's true
+      if (error.message === 'Network Error') {
+        saveOfflinePatient(formData);
+        setIsOfflineSave(true);
+        setStep(3);
+      } else {
+        Alert.alert('Error', error.response?.data?.message || 'Registration failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,7 +87,11 @@ const RegistrationScreen = ({ navigation }) => {
           <ChevronLeft size={24} color="#0f172a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Register Patient</Text>
-        <View style={{ width: 24 }} />
+        {netInfo.isConnected === false ? (
+          <WifiOff size={24} color="#f59e0b" />
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -161,11 +198,15 @@ const RegistrationScreen = ({ navigation }) => {
 
         {step === 3 && (
           <View style={styles.successSection}>
-            <View style={styles.successIconWrapper}>
-              <CheckCircle size={64} color="#22c55e" />
+            <View style={[styles.successIconWrapper, isOfflineSave && { backgroundColor: '#fef3c7' }]}>
+              {isOfflineSave ? <WifiOff size={64} color="#f59e0b" /> : <CheckCircle size={64} color="#22c55e" />}
             </View>
-            <Text style={styles.successTitle}>Registration Complete!</Text>
-            <Text style={styles.successDesc}>The health card has been successfully generated and sent to the patient via SMS/Email.</Text>
+            <Text style={styles.successTitle}>{isOfflineSave ? 'Saved Offline' : 'Registration Complete!'}</Text>
+            <Text style={styles.successDesc}>
+              {isOfflineSave 
+                ? 'No internet connection. The patient details have been securely saved on your device and will sync automatically when you are back online.'
+                : 'The health card has been successfully generated and sent to the patient via SMS/Email.'}
+            </Text>
             
             <TouchableOpacity 
               style={styles.primaryButton}
@@ -190,103 +231,120 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#f1f3f4',
   },
   backBtn: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f1f1f',
+    letterSpacing: -0.5,
   },
   content: {
-    padding: 24,
+    padding: 20,
   },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 32,
+    marginTop: 8,
   },
   stepDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#e2e8f0',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#f1f3f4',
   },
   stepDotActive: {
-    backgroundColor: '#e61d62',
+    backgroundColor: '#0b57d0',
   },
   stepLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: 8,
+    width: 48,
+    height: 3,
+    backgroundColor: '#f1f3f4',
+    marginHorizontal: 12,
+    borderRadius: 2,
   },
   stepLineActive: {
-    backgroundColor: '#e61d62',
+    backgroundColor: '#0b57d0',
   },
   formSection: {
     gap: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1f1f1f',
+    marginBottom: 12,
+    letterSpacing: -0.5,
   },
   input: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#747775',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     fontSize: 16,
+    color: '#1f1f1f',
   },
   primaryButton: {
-    backgroundColor: '#e61d62',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#0b57d0',
+    padding: 18,
+    borderRadius: 100,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
+    shadowColor: '#0b57d0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   primaryButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   secondaryButton: {
     backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 100,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#747775',
     flex: 1,
   },
   secondaryButtonText: {
-    color: '#64748b',
+    color: '#444746',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   buttonRow: {
     flexDirection: 'row',
-    marginTop: 8,
+    marginTop: 12,
+    gap: 12,
   },
   planCard: {
-    borderWidth: 2,
-    borderColor: '#f1f5f9',
-    borderRadius: 16,
-    padding: 16,
+    borderWidth: 1,
+    borderColor: '#c4c7c5',
+    borderRadius: 24,
+    padding: 24,
     backgroundColor: '#fff',
+    marginBottom: 4,
   },
   planCardActive: {
-    borderColor: '#e61d62',
-    backgroundColor: 'rgba(230, 29, 98, 0.05)',
+    borderColor: '#0b57d0',
+    backgroundColor: '#f3f6fc',
+    borderWidth: 2,
   },
   planHeader: {
     flexDirection: 'row',
@@ -295,45 +353,49 @@ const styles = StyleSheet.create({
   },
   planName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontWeight: '700',
+    color: '#1f1f1f',
   },
   planPrice: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginTop: 8,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1f1f1f',
+    marginTop: 4,
   },
   planDesc: {
     fontSize: 14,
-    color: '#64748b',
-    marginTop: 8,
+    color: '#444746',
+    marginTop: 12,
+    lineHeight: 20,
   },
   successSection: {
     alignItems: 'center',
-    paddingVertical: 48,
+    paddingVertical: 40,
   },
   successIconWrapper: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#dcfce7',
-    borderRadius: 60,
+    width: 96,
+    height: 96,
+    backgroundColor: '#e8f0fe',
+    borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   successTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1f1f1f',
+    marginBottom: 16,
+    textAlign: 'center',
+    letterSpacing: -0.5,
   },
   successDesc: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#444746',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
     lineHeight: 24,
+    paddingHorizontal: 12,
   },
 });
 

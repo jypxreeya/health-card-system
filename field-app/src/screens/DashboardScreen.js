@@ -1,14 +1,64 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, TrendingUp, Users, LogOut } from 'lucide-react-native';
+import { UserPlus, TrendingUp, Users, LogOut, CloudOff, RefreshCw } from 'lucide-react-native';
 import api from '../api/axios';
+import { useNetInfo } from '@react-native-community/netinfo';
+import { getOfflinePatients, deleteOfflinePatient } from '../api/database';
+import { useFocusEffect } from '@react-navigation/native';
 
 const DashboardScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const [stats, setStats] = useState({ today: 0, monthly: 0 });
   const [refreshing, setRefreshing] = useState(false);
+  const [offlineRecords, setOfflineRecords] = useState([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const netInfo = useNetInfo();
+
+  // Check offline records when returning to dashboard
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadOfflineRecords();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadOfflineRecords = () => {
+    const records = getOfflinePatients();
+    setOfflineRecords(records || []);
+  };
+
+  // Auto-sync when internet comes back
+  useEffect(() => {
+    if (netInfo.isConnected && offlineRecords.length > 0 && !isSyncing) {
+      syncOfflineData();
+    }
+  }, [netInfo.isConnected, offlineRecords.length]);
+
+  const syncOfflineData = async () => {
+    if (!netInfo.isConnected) return;
+    setIsSyncing(true);
+    let successCount = 0;
+    
+    for (const record of offlineRecords) {
+      try {
+        const payload = JSON.parse(record.payload);
+        await api.post('/patients', payload);
+        deleteOfflinePatient(record.id);
+        successCount++;
+      } catch (err) {
+        console.error('Sync failed for record', record.id, err);
+      }
+    }
+    
+    setIsSyncing(false);
+    loadOfflineRecords();
+    if (successCount > 0) {
+      fetchStats();
+      Alert.alert('Sync Complete', `Successfully synced ${successCount} patient(s) to the cloud.`);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -54,6 +104,26 @@ const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        {offlineRecords.length > 0 && (
+          <View style={styles.offlineBanner}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <CloudOff size={20} color="#b45309" style={{ marginRight: 8 }} />
+              <View>
+                <Text style={styles.offlineTitle}>Pending Sync: {offlineRecords.length}</Text>
+                <Text style={styles.offlineDesc}>Patients waiting for connection</Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={styles.syncBtn} 
+              onPress={syncOfflineData}
+              disabled={isSyncing || !netInfo.isConnected}
+            >
+              {isSyncing ? <ActivityIndicator size="small" color="#fff" /> : <RefreshCw size={16} color="#fff" />}
+              <Text style={styles.syncBtnText}>{isSyncing ? 'Syncing...' : 'Sync'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <View style={[styles.iconContainer, { backgroundColor: '#e0f2fe' }]}>
@@ -92,104 +162,145 @@ const DashboardScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fff',
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
+    paddingTop: 12,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 16,
+    marginBottom: 28,
+    marginTop: 12,
   },
   greeting: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 14,
+    color: '#444746',
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
   name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1f1f1f',
+    marginTop: 2,
+    letterSpacing: -0.5,
   },
   logoutBtn: {
-    padding: 8,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    width: 48,
+    height: 48,
+    backgroundColor: '#f1f3f4',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 32,
+    gap: 12,
+    marginBottom: 24,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F3F6FC', // Material 3 secondary container
     padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderRadius: 28, // M3 large rounding
+    borderWidth: 0,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    backgroundColor: '#fff',
   },
   statValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#001d35',
+    letterSpacing: -1,
   },
   statLabel: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 4,
+    fontSize: 13,
+    color: '#444746',
+    fontWeight: '600',
+    marginTop: 2,
   },
   actionCard: {
-    backgroundColor: '#e61d62',
-    borderRadius: 20,
-    padding: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#e61d62',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
+    backgroundColor: '#0b57d0', // Material 3 Primary
+    borderRadius: 28,
+    padding: 32,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    shadowColor: '#0b57d0',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
     elevation: 8,
+    marginTop: 12,
   },
   actionIcon: {
     width: 64,
     height: 64,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginBottom: 24,
   },
   actionTextContainer: {
-    flex: 1,
+    width: '100%',
   },
   actionTitle: {
     color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   actionSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    marginTop: 4,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 15,
+    marginTop: 6,
+    lineHeight: 20,
   },
+  offlineBanner: {
+    backgroundColor: '#fff8e1',
+    borderWidth: 1,
+    borderColor: '#ffe082',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  offlineTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#795548',
+  },
+  offlineDesc: {
+    fontSize: 13,
+    color: '#8d6e63',
+    marginTop: 2,
+  },
+  syncBtn: {
+    backgroundColor: '#ffa000',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+    gap: 8,
+  },
+  syncBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  }
 });
 
 export default DashboardScreen;

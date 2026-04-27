@@ -1,7 +1,9 @@
 const { query } = require('../config/database');
 const logger = require('../config/logger');
+const { logAudit } = require('../utils/audit');
 const cardService = require('../services/card.service');
 const emailService = require('../services/email.service');
+const { decrypt } = require('../utils/crypto');
 
 // ─── GET /api/cards ───────────────────────────────────────────────────────────
 exports.getAll = async (req, res) => {
@@ -84,7 +86,7 @@ exports.getByCardNumber = async (req, res) => {
       JOIN membership_plans mp ON hc.plan_id = mp.id
       LEFT JOIN hospitals h ON hc.hospital_id = h.id
       LEFT JOIN users u ON hc.issued_by = u.id
-      WHERE UPPER(hc.card_number) = UPPER($1)
+      WHERE UPPER(hc.card_number) = UPPER($1) OR p.phone = $1
     `, [cardNumber]);
 
     if (!result.rows.length) {
@@ -92,6 +94,9 @@ exports.getByCardNumber = async (req, res) => {
     }
 
     const card = result.rows[0];
+    if (card && card.address) {
+      card.address = decrypt(card.address);
+    }
 
     // Fetch family members
     const familyResult = await query(
@@ -184,6 +189,12 @@ exports.updateStatus = async (req, res) => {
     if (!result.rows.length) {
       return res.status(404).json({ success: false, message: 'Card not found' });
     }
+
+    // Log Audit
+    logAudit(req.user.id, 'UPDATE_CARD_STATUS', 'health_cards', id, {
+      status: status,
+      card_number: result.rows[0].card_number
+    });
 
     res.json({ success: true, message: `Card status updated to ${status}`, data: result.rows[0] });
   } catch (error) {

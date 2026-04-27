@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, CreditCard, Building2, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Building2, LogOut, Shield } from 'lucide-react';
 
 const AppLayout = () => {
   const { user, logout } = useAuth();
@@ -15,6 +15,10 @@ const AppLayout = () => {
 
   if (['super_admin', 'admin'].includes(user?.role)) {
     navItems.push({ name: 'Hospitals', path: '/hospitals', icon: <Building2 size={20} /> });
+  }
+
+  if (user?.role === 'super_admin') {
+    navItems.push({ name: 'Audit Logs', path: '/audit-logs', icon: <Shield size={20} /> });
   }
 
   return (

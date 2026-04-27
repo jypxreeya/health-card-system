@@ -11,7 +11,11 @@ router.use(authenticate);
 router.get('/search', patientController.search);
 
 // CRUD
-router.get('/', patientController.getAll);
+router.get('/', isAnyStaff, patientController.getAll);
+
+// Patient portal dashboard route
+router.get('/me/dashboard', authenticate, patientController.getPatientDashboard);
+
 router.get('/:id', patientController.getById);
 
 router.post('/',

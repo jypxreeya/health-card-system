@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import CardVerification from './pages/CardVerification';
 import PatientRegistration from './pages/PatientRegistration';
 import Plans from './pages/Plans';
+import AuditLogs from './pages/AuditLogs';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, user } = useAuth();
@@ -33,6 +34,7 @@ function App() {
         <Route path="verify-card" element={<CardVerification />} />
         <Route path="register" element={<PatientRegistration />} />
         <Route path="plans" element={<Plans />} />
+        <Route path="audit-logs" element={<AuditLogs />} />
       </Route>
     </Routes>
   );

@@ -159,3 +159,44 @@ exports.getServiceReport = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to generate report' });
   }
 };
+
+// ─── GET /api/admin/audit-logs ────────────────────────────────────────────────
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const { page = 1, limit = 50, action = '', user_id = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let conditions = ['1=1'];
+    let params = [];
+    let idx = 1;
+
+    if (action) { conditions.push(`al.action = $${idx}`); params.push(action); idx++; }
+    if (user_id) { conditions.push(`al.user_id = $${idx}`); params.push(user_id); idx++; }
+
+    const [data, count] = await Promise.all([
+      query(`
+        SELECT al.*, u.name as user_name, u.role as user_role
+        FROM audit_logs al
+        LEFT JOIN users u ON al.user_id = u.id
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY al.created_at DESC
+        LIMIT $${idx} OFFSET $${idx + 1}
+      `, [...params, parseInt(limit), offset]),
+      query(`SELECT COUNT(*) as total FROM audit_logs al WHERE ${conditions.join(' AND ')}`, params),
+    ]);
+
+    res.json({
+      success: true,
+      data: data.rows,
+      pagination: {
+        total: parseInt(count.rows[0].total),
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(count.rows[0].total / parseInt(limit)),
+      }
+    });
+  } catch (error) {
+    logger.error('Get audit logs error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch audit logs' });
+  }
+};

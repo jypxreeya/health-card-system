@@ -31,5 +31,6 @@ router.put('/users/:id/reset-password',
 // Reports
 router.get('/reports/registrations', adminController.getRegistrationReport);
 router.get('/reports/services', adminController.getServiceReport);
+router.get('/audit-logs', isSuperAdmin, adminController.getAuditLogs);
 
 module.exports = router;

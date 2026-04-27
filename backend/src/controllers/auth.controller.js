@@ -79,6 +79,119 @@ exports.login = async (req, res) => {
   }
 };
 
+// ─── POST /api/auth/patient-login/request-otp ───────────────────────────────
+exports.requestPatientOtp = async (req, res) => {
+  try {
+    const { phone, cardNumber } = req.body;
+
+    const result = await query(
+      `SELECT p.id, p.full_name, p.phone, p.email, p.is_active, hc.card_number, hc.status as card_status 
+       FROM patients p
+       JOIN health_cards hc ON p.id = hc.patient_id
+       WHERE p.phone = $1 AND UPPER(hc.card_number) = UPPER($2)`,
+      [phone, cardNumber]
+    );
+
+    if (!result.rows.length) {
+      return res.status(401).json({ success: false, message: 'Invalid phone number or card number' });
+    }
+
+    const patient = result.rows[0];
+
+    if (!patient.is_active || patient.card_status !== 'active') {
+      return res.status(403).json({ success: false, message: 'Your health card is inactive or expired.' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Save to database with 5 mins expiry
+    await query(
+      `UPDATE patients SET otp_code = $1, otp_expires_at = NOW() + INTERVAL '5 minutes' WHERE id = $2`,
+      [otp, patient.id]
+    );
+
+    // Send email (or log to console if no email)
+    const emailService = require('../services/email.service');
+    const emailResult = await emailService.sendOtpEmail(patient, otp);
+
+    // In dev mode (no Gmail), include OTP in response so the portal can show it
+    const responseData = {
+      phone: patient.phone,
+      hasEmail: !!patient.email,
+      emailSent: emailResult.sent,
+    };
+    if (emailResult.devOtp) {
+      responseData.devOtp = emailResult.devOtp;
+    }
+
+    res.json({
+      success: true,
+      message: emailResult.sent ? 'OTP sent to your email' : 'OTP generated (dev mode)',
+      data: responseData,
+    });
+  } catch (error) {
+    logger.error('Request patient OTP error:', error);
+    res.status(500).json({ success: false, message: 'Failed to request OTP' });
+  }
+};
+
+// ─── POST /api/auth/patient-login/verify-otp ────────────────────────────────
+exports.verifyPatientOtp = async (req, res) => {
+  try {
+    const { phone, cardNumber, otp } = req.body;
+
+    const result = await query(
+      `SELECT p.id, p.full_name, p.phone, p.otp_code, p.otp_expires_at, p.is_active, hc.card_number, hc.status as card_status 
+       FROM patients p
+       JOIN health_cards hc ON p.id = hc.patient_id
+       WHERE p.phone = $1 AND UPPER(hc.card_number) = UPPER($2)`,
+      [phone, cardNumber]
+    );
+
+    if (!result.rows.length) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const patient = result.rows[0];
+
+    if (!patient.is_active || patient.card_status !== 'active') {
+      return res.status(403).json({ success: false, message: 'Your health card is inactive or expired.' });
+    }
+
+    if (!patient.otp_code || patient.otp_code !== otp || new Date(patient.otp_expires_at) < new Date()) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    // Clear OTP after successful login
+    await query(`UPDATE patients SET otp_code = NULL, otp_expires_at = NULL WHERE id = $1`, [patient.id]);
+
+    // Generate tokens specifically for patient
+    const payload = { id: patient.id, role: 'patient' };
+    const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: {
+          id: patient.id,
+          name: patient.full_name,
+          phone: patient.phone,
+          role: 'patient',
+          cardNumber: patient.card_number,
+        },
+        accessToken,
+        refreshToken,
+      }
+    });
+  } catch (error) {
+    logger.error('Verify patient OTP error:', error);
+    res.status(500).json({ success: false, message: 'Login failed' });
+  }
+};
+
 // ─── POST /api/auth/refresh ───────────────────────────────────────────────────
 exports.refreshToken = async (req, res) => {
   try {

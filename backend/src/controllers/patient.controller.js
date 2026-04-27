@@ -2,6 +2,8 @@ const { query, getClient } = require('../config/database');
 const logger = require('../config/logger');
 const cardService = require('../services/card.service');
 const emailService = require('../services/email.service');
+const { encrypt, decrypt } = require('../utils/crypto');
+const { logAudit } = require('../utils/audit');
 
 // ─── Helper: Generate Card Number ────────────────────────────────────────────
 async function generateCardNumber() {
@@ -11,6 +13,66 @@ async function generateCardNumber() {
   const prefix = process.env.CARD_NUMBER_PREFIX || 'NHC';
   return `${prefix}-${year}-${seq}`;
 }
+
+// ─── GET /api/patients/me/dashboard ──────────────────────────────────────────
+exports.getPatientDashboard = async (req, res) => {
+  try {
+    if (req.user.role !== 'patient') {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    const patientId = req.user.id;
+
+    // Get card and plan info
+    const cardResult = await query(
+      `SELECT hc.card_number, hc.status, hc.valid_until, mp.name as plan_name, mp.benefits
+       FROM health_cards hc
+       JOIN membership_plans mp ON hc.plan_id = mp.id
+       WHERE hc.patient_id = $1`,
+      [patientId]
+    );
+
+    if (!cardResult.rows.length) {
+      return res.status(404).json({ success: false, message: 'Card not found' });
+    }
+
+    const card = cardResult.rows[0];
+
+    // Get savings history
+    const historyResult = await query(
+      `SELECT visit_date, service_category, original_amount, discount_amount, final_amount, h.name as hospital_name
+       FROM service_utilization su
+       JOIN hospitals h ON su.hospital_id = h.id
+       WHERE su.patient_id = $1
+       ORDER BY visit_date DESC`,
+      [patientId]
+    );
+
+    const history = historyResult.rows;
+    const totalSaved = history.reduce((sum, item) => sum + Number(item.discount_amount), 0);
+
+    res.json({
+      success: true,
+      data: {
+        card: {
+          card_number: card.card_number,
+          plan_name: card.plan_name,
+          status: card.status,
+          valid_until: card.valid_until
+        },
+        benefits: typeof card.benefits === 'string' ? JSON.parse(card.benefits) : card.benefits,
+        savings: {
+          total_saved: totalSaved,
+          services_used: history.length
+        },
+        history
+      }
+    });
+  } catch (error) {
+    logger.error('Get patient dashboard error:', error);
+    res.status(500).json({ success: false, message: 'Failed to load dashboard' });
+  }
+};
 
 // ─── GET /api/patients ────────────────────────────────────────────────────────
 exports.getAll = async (req, res) => {
@@ -73,9 +135,14 @@ exports.getAll = async (req, res) => {
       `, params),
     ]);
 
+    const processedRows = dataResult.rows.map(row => {
+      if (row.address) row.address = decrypt(row.address);
+      return row;
+    });
+
     res.json({
       success: true,
-      data: dataResult.rows,
+      data: processedRows,
       pagination: {
         total: parseInt(countResult.rows[0].total),
         page: parseInt(page),
@@ -129,13 +196,18 @@ exports.getById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
 
+    const patient = patientResult.rows[0];
+    if (patient && patient.address) {
+      patient.address = decrypt(patient.address);
+    }
+
     res.json({
       success: true,
       data: {
-        ...patientResult.rows[0],
+        ...patient,
         family_members: familyResult.rows,
         health_cards: cardsResult.rows,
-        recent_services: servicesResult.rows,
+        recent_services: servicesResult.rows
       }
     });
   } catch (error) {
@@ -167,6 +239,9 @@ exports.create = async (req, res) => {
       });
     }
 
+    // Encrypt sensitive data
+    const encryptedAddress = encrypt(address) || null;
+
     // Create patient
     const patientResult = await client.query(`
       INSERT INTO patients (full_name, phone, email, gender, age, date_of_birth, address, area, city, state, pincode, registered_by, hospital_id)
@@ -174,7 +249,7 @@ exports.create = async (req, res) => {
       RETURNING *
     `, [
       full_name, phone, email || null, gender || null, age || null,
-      date_of_birth || null, address || null, area || null,
+      date_of_birth || null, encryptedAddress, area || null,
       city || null, state || null, pincode || null,
       req.user.id,
       req.user.hospital_id || null
@@ -233,6 +308,12 @@ exports.create = async (req, res) => {
       );
     }
 
+    // Log Audit
+    logAudit(req.user.id, 'REGISTER_PATIENT', 'patients', patient.id, {
+      full_name: patient.full_name,
+      plan_id: plan_id
+    });
+
     res.status(201).json({
       success: true,
       message: 'Patient registered successfully',
@@ -253,17 +334,24 @@ exports.update = async (req, res) => {
     const { id } = req.params;
     const { full_name, email, gender, age, date_of_birth, address, area, city, state, pincode, notes } = req.body;
 
+    const encryptedAddress = encrypt(address) || null;
+
     const result = await query(`
       UPDATE patients
       SET full_name=$1, email=$2, gender=$3, age=$4, date_of_birth=$5,
           address=$6, area=$7, city=$8, state=$9, pincode=$10, notes=$11
       WHERE id = $12
       RETURNING *
-    `, [full_name, email, gender, age, date_of_birth, address, area, city, state, pincode, notes, id]);
+    `, [full_name, email, gender, age, date_of_birth, encryptedAddress, area, city, state, pincode, notes, id]);
 
     if (!result.rows.length) {
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
+
+    // Log Audit
+    logAudit(req.user.id, 'UPDATE_PATIENT', 'patients', id, {
+      full_name: result.rows[0].full_name
+    });
 
     res.json({ success: true, message: 'Patient updated', data: result.rows[0] });
   } catch (error) {

@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const logger = require('../config/logger');
+const { logAudit } = require('../utils/audit');
 
 // ─── GET /api/services ────────────────────────────────────────────────────────
 exports.getAll = async (req, res) => {
@@ -109,6 +110,13 @@ exports.create = async (req, res) => {
       original_amount || null, discount_percentage || 0,
       discountAmt, finalAmount, notes || null, req.user.id
     ]);
+
+    // Log Audit
+    logAudit(req.user.id, 'RECORD_SERVICE', 'service_utilization', result.rows[0].id, {
+      card_number: card_number,
+      service_type: service_type,
+      hospital_id: req.user.hospital_id
+    });
 
     res.status(201).json({
       success: true,

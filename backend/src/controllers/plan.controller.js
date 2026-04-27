@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const logger = require('../config/logger');
+const { logAudit } = require('../utils/audit');
 
 // ─── GET /api/plans ───────────────────────────────────────────────────────────
 exports.getAll = async (req, res) => {
@@ -41,6 +42,12 @@ exports.create = async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *
     `, [name, code.toUpperCase(), description, price, validity_months, max_family_members, JSON.stringify(benefits || [])]);
 
+    // Log Audit
+    logAudit(req.user.id, 'CREATE_PLAN', 'membership_plans', result.rows[0].id, {
+      name: name,
+      code: code
+    });
+
     res.status(201).json({ success: true, message: 'Plan created', data: result.rows[0] });
   } catch (error) {
     if (error.code === '23505') {
@@ -66,6 +73,11 @@ exports.update = async (req, res) => {
     if (!result.rows.length) {
       return res.status(404).json({ success: false, message: 'Plan not found' });
     }
+
+    // Log Audit
+    logAudit(req.user.id, 'UPDATE_PLAN', 'membership_plans', id, {
+      name: name
+    });
 
     res.json({ success: true, message: 'Plan updated', data: result.rows[0] });
   } catch (error) {

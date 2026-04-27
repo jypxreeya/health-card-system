@@ -72,50 +72,56 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fff',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     padding: 24,
+    maxWidth: 450,
+    alignSelf: 'center',
+    width: '100%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1f1f1f',
     marginTop: 16,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#444746',
     marginTop: 8,
+    fontWeight: '500',
   },
   form: {
-    gap: 16,
+    gap: 12,
   },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#747775', // M3 outline color
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 4, // M3 standard text field
     fontSize: 16,
+    color: '#1f1f1f',
   },
   button: {
-    backgroundColor: '#e61d62',
+    backgroundColor: '#0b57d0',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 100, // M3 FAB style rounding for buttons
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });
 

@@ -14,6 +14,24 @@ router.post('/login',
   authController.login
 );
 
+router.post('/patient-login/request-otp',
+  [
+    body('phone').notEmpty().withMessage('Phone number required'),
+    body('cardNumber').notEmpty().withMessage('Card number required'),
+    validate,
+  ],
+  authController.requestPatientOtp
+);
+
+router.post('/patient-login/verify-otp',
+  [
+    body('phone').notEmpty().withMessage('Phone number required'),
+    body('cardNumber').notEmpty().withMessage('Card number required'),
+    body('otp').isLength({ min: 6, max: 6 }).withMessage('Valid 6-digit OTP required'),
+    validate,
+  ],
+  authController.verifyPatientOtp
+);
 router.post('/refresh',
   body('refreshToken').notEmpty().withMessage('Refresh token required'),
   validate,

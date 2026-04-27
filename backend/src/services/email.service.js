@@ -2,6 +2,13 @@ const nodemailer = require('nodemailer');
 const logger = require('../config/logger');
 const cardService = require('./card.service');
 
+// Check if Gmail credentials are actually configured (not placeholder values)
+const isGmailConfigured = () => {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  return user && pass && user !== 'your@gmail.com' && pass !== 'your_gmail_app_password';
+};
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -265,4 +272,75 @@ async function sendExpiryReminder(patient, card, daysLeft) {
   }
 }
 
-module.exports = { sendWelcomeEmail, sendHealthCard, sendServiceNotification, sendExpiryReminder };
+// ─── Send OTP Email ────────────────────────────────────────────────────────────
+// Returns: { sent: boolean, devOtp?: string }
+// - sent: true if email was dispatched via Gmail
+// - devOtp: the OTP itself, only present in dev mode (Gmail not configured)
+async function sendOtpEmail(patient, otp) {
+  // ─ DEV FALLBACK: If Gmail is not configured, log loudly and return OTP in result ─
+  if (!isGmailConfigured()) {
+    // Loud console.log so it is impossible to miss in ANY terminal
+    console.log('\n');
+    console.log('╔══════════════════════════════════════════════════════════╗');
+    console.log('║              🔑  DEV MODE — OTP GENERATED               ║');
+    console.log('╠══════════════════════════════════════════════════════════╣');
+    console.log(`║  Patient : ${(patient.full_name + ' (' + patient.phone + ')').padEnd(46)} ║`);
+    console.log(`║  OTP     : ${otp.padEnd(46)} ║`);
+    console.log(`║  Email   : ${(patient.email || '(none on file)').padEnd(46)} ║`);
+    console.log('╠══════════════════════════════════════════════════════════╣');
+    console.log('║  Gmail not configured — OTP shown on portal screen too  ║');
+    console.log('╚══════════════════════════════════════════════════════════╝');
+    console.log('\n');
+
+    logger.warn(`[DEV MODE] OTP for ${patient.full_name}: ${otp} (also returned in API response)`);
+    // Return OTP so controller can include it in the API response
+    return { sent: false, devOtp: otp };
+  }
+
+  // ─ No email on record — still dev-safe ─
+  if (!patient.email) {
+    console.log('\n');
+    console.log('╔══════════════════════════════════════════════════════════╗');
+    console.log('║        🔑  OTP GENERATED (no email on record)           ║');
+    console.log('╠══════════════════════════════════════════════════════════╣');
+    console.log(`║  Patient : ${(patient.full_name + ' (' + patient.phone + ')').padEnd(46)} ║`);
+    console.log(`║  OTP     : ${otp.padEnd(46)} ║`);
+    console.log('╚══════════════════════════════════════════════════════════╝');
+    console.log('\n');
+    logger.warn(`[NO EMAIL] OTP for ${patient.full_name}: ${otp}`);
+    return { sent: false, devOtp: otp };
+  }
+
+  try {
+    const content = `
+      <h2>Login Verification Code</h2>
+      <p>Dear <strong>${patient.full_name}</strong>,</p>
+      <p>Please use the following 6-digit verification code to securely access your Namma Health portal.</p>
+      
+      <div class="card-box" style="margin: 32px 0;">
+        <div class="card-label">Your Secure OTP</div>
+        <div class="card-num" style="font-size: 32px; letter-spacing: 8px;">${otp}</div>
+      </div>
+
+      <p style="color: #d32f2f; font-weight: 600; font-size: 13px;">⚠️ This code will expire in 5 minutes.</p>
+      <p>If you did not request this code, please ignore this email.</p>
+    `;
+
+    await transporter.sendMail({
+      from: `"${BRAND.name}" <${process.env.GMAIL_USER}>`,
+      to: patient.email,
+      subject: `🔒 Your ${BRAND.name} Login Code: ${otp}`,
+      html: baseTemplate(content, 'Login Verification'),
+    });
+
+    logger.info(`OTP email sent to ${patient.email}`);
+    return { sent: true };
+  } catch (error) {
+    // Log the error but DO NOT throw — OTP is already saved in DB
+    logger.error('OTP email delivery failed (non-fatal):', error.message);
+    // Return OTP as dev fallback since email failed
+    return { sent: false, devOtp: otp };
+  }
+}
+
+module.exports = { sendWelcomeEmail, sendHealthCard, sendServiceNotification, sendExpiryReminder, sendOtpEmail };

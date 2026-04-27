@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import * as storage from '../utils/storage';
 import api from '../api/axios';
 
 const AuthContext = createContext({});
@@ -14,8 +14,8 @@ export const AuthProvider = ({ children }) => {
 
   const checkToken = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
-      const storedUser = await SecureStore.getItemAsync('userData');
+      const token = await storage.getItemAsync('userToken');
+      const storedUser = await storage.getItemAsync('userData');
       
       if (token && storedUser) {
         setUser(JSON.parse(storedUser));
@@ -36,8 +36,8 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Access denied. Field Executives only.');
       }
 
-      await SecureStore.setItemAsync('userToken', accessToken);
-      await SecureStore.setItemAsync('userData', JSON.stringify(userData));
+      await storage.setItemAsync('userToken', accessToken);
+      await storage.setItemAsync('userData', JSON.stringify(userData));
       
       setUser(userData);
       return { success: true };
@@ -50,8 +50,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync('userToken');
-    await SecureStore.deleteItemAsync('userData');
+    await storage.deleteItemAsync('userToken');
+    await storage.deleteItemAsync('userData');
     setUser(null);
   };
 

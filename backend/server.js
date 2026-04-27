@@ -19,6 +19,7 @@ const fieldRoutes = require('./src/routes/field.routes');
 const adminRoutes = require('./src/routes/admin.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
 const dashboardRoutes = require('./src/routes/dashboard.routes');
+const { initCronJobs } = require('./src/utils/cron');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,7 +33,8 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:5173',
-    'http://localhost:19006', // Expo
+    'http://localhost:8081', // Expo Web
+    'http://localhost:19006', // Old Expo
   ],
   credentials: true,
 }));
@@ -108,6 +110,7 @@ async function startServer() {
       logger.info(`🚀 Namma Health Card API running on port ${PORT}`);
       logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
       logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
+      initCronJobs();
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

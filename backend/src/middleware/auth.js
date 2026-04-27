@@ -13,16 +13,31 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const result = await query(
-      'SELECT id, name, email, phone, role, hospital_id, is_active FROM users WHERE id = $1',
-      [decoded.id]
-    );
+    let result;
+    let user;
 
-    if (!result.rows.length) {
-      return res.status(401).json({ success: false, message: 'User not found' });
+    if (decoded.role === 'patient') {
+      result = await query(
+        'SELECT id, full_name as name, phone, is_active FROM patients WHERE id = $1',
+        [decoded.id]
+      );
+      if (result.rows.length) {
+        user = result.rows[0];
+        user.role = 'patient';
+      }
+    } else {
+      result = await query(
+        'SELECT id, name, email, phone, role, hospital_id, is_active FROM users WHERE id = $1',
+        [decoded.id]
+      );
+      if (result.rows.length) {
+        user = result.rows[0];
+      }
     }
 
-    const user = result.rows[0];
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not found' });
+    }
     if (!user.is_active) {
       return res.status(403).json({ success: false, message: 'Account is deactivated. Contact administrator.' });
     }

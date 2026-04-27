@@ -45,3 +45,5 @@ Below are the default credentials seeded into the database for testing the vario
 > **Dev Mode OTP:** Gmail is not configured in `.env`. After clicking "Request OTP", look at the **backend server terminal** window — the OTP code will be printed there in bold.
 > 
 > To enable real Gmail OTP delivery: edit `backend/.env` and set `GMAIL_USER` and `GMAIL_APP_PASSWORD` (use a Gmail App Password, not your regular Gmail password).
+
+supabase: rockstarRK@72107

@@ -26,28 +26,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!patient) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f8fafc]">
       {/* Navigation */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Shield size={20} className="text-white" />
+      <nav className="glass sticky top-0 z-50 transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-20">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <Shield size={24} className="text-white" />
               </div>
-              <span className="font-bold text-xl text-slate-900 hidden sm:block">Namma Health</span>
+              <div className="flex flex-col">
+                <span className="font-black text-xl text-slate-900 leading-none tracking-tight italic">NAMMA<span className="text-primary">HEALTH</span></span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Universal Care</span>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">
-                <User size={16} />
-                <span className="font-medium">{patient.name}</span>
+            <div className="flex items-center gap-6">
+              <div className="hidden md:flex items-center gap-3 text-sm text-slate-600 bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm">
+                <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-primary">
+                  <User size={14} />
+                </div>
+                <span className="font-bold">{patient.name}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="text-slate-500 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50"
-                title="Logout"
+                className="group flex items-center gap-2 text-slate-400 hover:text-red-600 font-bold text-sm transition-all px-4 py-2 rounded-xl hover:bg-red-50"
               >
-                <LogOut size={20} />
+                <span className="hidden sm:inline">Sign Out</span>
+                <LogOut size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
@@ -55,7 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {children}
       </main>
     </div>

@@ -29,7 +29,7 @@ const LoginScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Shield size={64} color="#e61d62" />
+          <Shield size={64} color="#0b57d0" />
           <Text style={styles.title}>Namma Health</Text>
           <Text style={styles.subtitle}>Field Executive Portal</Text>
         </View>

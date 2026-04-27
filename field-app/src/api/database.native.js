@@ -1,18 +1,8 @@
 import * as SQLite from 'expo-sqlite';
-import { Platform } from 'react-native';
 
 let db;
-const isWeb = Platform.OS === 'web';
-
-// Fallback for web if SQLite fails
-const webOfflineKey = 'namma_health_offline_patients';
 
 export const initDb = () => {
-  if (isWeb) {
-    console.log('Running on Web: SQLite restricted, using localStorage fallback for offline data.');
-    return;
-  }
-
   try {
     db = SQLite.openDatabaseSync('nammahealth.db');
     db.execSync(`
@@ -33,13 +23,6 @@ export const saveOfflinePatient = (payload) => {
     created_at: new Date().toISOString()
   };
 
-  if (isWeb) {
-    const existing = JSON.parse(localStorage.getItem(webOfflineKey) || '[]');
-    existing.push({ ...record, id: Date.now() });
-    localStorage.setItem(webOfflineKey, JSON.stringify(existing));
-    return;
-  }
-
   if (!db) return;
   try {
     db.runSync(
@@ -52,10 +35,6 @@ export const saveOfflinePatient = (payload) => {
 };
 
 export const getOfflinePatients = () => {
-  if (isWeb) {
-    return JSON.parse(localStorage.getItem(webOfflineKey) || '[]');
-  }
-
   if (!db) return [];
   try {
     return db.getAllSync('SELECT * FROM offline_patients ORDER BY created_at ASC');
@@ -66,13 +45,6 @@ export const getOfflinePatients = () => {
 };
 
 export const deleteOfflinePatient = (id) => {
-  if (isWeb) {
-    const existing = JSON.parse(localStorage.getItem(webOfflineKey) || '[]');
-    const filtered = existing.filter(item => item.id !== id);
-    localStorage.setItem(webOfflineKey, JSON.stringify(filtered));
-    return;
-  }
-
   if (!db) return;
   try {
     db.runSync('DELETE FROM offline_patients WHERE id = ?', [id]);

@@ -4,16 +4,14 @@ import * as storage from '../utils/storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-// Get the machine's IP address dynamically for mobile devices
+// Get the machine's IP address
 const getBaseUrl = () => {
   if (Platform.OS === 'web') {
     return 'http://localhost:5000/api';
   }
   
-  // Extract IP from debugger host (works for physical devices and emulators)
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  const ip = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
-  return `http://${ip}:5000/api`;
+  // Using the verified LAN IP of this machine for mobile connectivity
+  return 'http://192.168.1.78:5000/api';
 };
 
 const api = axios.create({

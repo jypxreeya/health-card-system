@@ -126,16 +126,16 @@ const DashboardScreen = ({ navigation }) => {
 
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <View style={[styles.iconContainer, { backgroundColor: '#e0f2fe' }]}>
-              <TrendingUp size={24} color="#0284c7" />
+            <View style={[styles.iconContainer, { backgroundColor: '#c2e7ff' }]}>
+              <TrendingUp size={24} color="#001d35" />
             </View>
             <Text style={styles.statValue}>{stats.today}</Text>
             <Text style={styles.statLabel}>Today's Sales</Text>
           </View>
           
           <View style={styles.statCard}>
-            <View style={[styles.iconContainer, { backgroundColor: '#fce7f3' }]}>
-              <Users size={24} color="#db2777" />
+            <View style={[styles.iconContainer, { backgroundColor: '#c4eed0' }]}>
+              <Users size={24} color="#072711" />
             </View>
             <Text style={styles.statValue}>{stats.monthly}</Text>
             <Text style={styles.statLabel}>Monthly Total</Text>

@@ -4,108 +4,145 @@ import api from '../api/axios';
 import { Shield, User, Clock, Activity, Search } from 'lucide-react';
 import { format } from 'date-fns';
 
+const getActionStyle = (action) => {
+  if (action.includes('CREATE') || action.includes('REGISTER'))
+    return { bg:'#F0FFF4', color:'#22863A', border:'#C6F6D5' };
+  if (action.includes('UPDATE'))
+    return { bg:'#EBF8FF', color:'#2B6CB0', border:'#BEE3F8' };
+  if (action.includes('DELETE'))
+    return { bg:'#FFF5F5', color:'#C53030', border:'#FEB2B2' };
+  return { bg:'#FFF0F5', color:'#E8528A', border:'#FFCCE0' };
+};
+
 const AuditLogs = () => {
   const { data: logsData, isLoading } = useQuery({
     queryKey: ['audit-logs'],
-    queryFn: async () => {
-      const res = await api.get('/admin/audit-logs');
-      return res.data;
-    }
+    queryFn: async () => { const res = await api.get('/admin/audit-logs'); return res.data; }
   });
 
   const logs = logsData?.data || [];
 
-  const getActionColor = (action) => {
-    if (action.includes('CREATE') || action.includes('REGISTER')) return 'text-green-600 bg-green-50';
-    if (action.includes('UPDATE')) return 'text-blue-600 bg-blue-50';
-    if (action.includes('DELETE')) return 'text-red-600 bg-red-50';
-    return 'text-gray-600 bg-gray-50';
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div style={{ display:'flex', flexDirection:'column', gap:'24px' }}>
+
+      {/* ── HEADER ── */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">System Audit Logs</h1>
-          <p className="text-gray-500 mt-1">Track staff actions and system changes for security compliance.</p>
+          <h1 style={{ fontSize:'22px', fontWeight:800, color:'#1A202C', letterSpacing:'-0.02em' }}>Audit Logs</h1>
+          <p style={{ fontSize:'13px', color:'#718096', marginTop:'4px', fontWeight:500 }}>
+            Track staff actions and system changes for security compliance.
+          </p>
         </div>
-        <div className="flex gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Filter actions..." 
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm"
-            />
-          </div>
+        <div style={{ position:'relative' }}>
+          <Search size={15} style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#CBD5E0' }}/>
+          <input
+            type="text"
+            placeholder="Filter actions..."
+            style={{
+              paddingLeft:'36px', paddingRight:'14px', paddingTop:'10px', paddingBottom:'10px',
+              border:'2px solid #FFCCE0', borderRadius:'10px', fontSize:'13px',
+              fontFamily:'Poppins,sans-serif', outline:'none', backgroundColor:'white',
+              color:'#1A202C', width:'220px'
+            }}
+          />
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
+      {/* ── TABLE ── */}
+      <div className="pink-card" style={{ padding:0, overflow:'hidden' }}>
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Timestamp</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Entity</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Details</th>
+              <tr style={{ backgroundColor:'#FFF0F5' }}>
+                {['Timestamp', 'User', 'Action', 'Entity', 'Details'].map(h => (
+                  <th key={h} style={{
+                    padding:'14px 20px', textAlign:'left',
+                    fontSize:'10px', fontWeight:800, color:'#A0AEC0',
+                    textTransform:'uppercase', letterSpacing:'0.15em',
+                    borderBottom:'1px solid #FFCCE0'
+                  }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
+            <tbody>
+              {isLoading && (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center">
-                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <td colSpan={5} style={{ padding:'48px', textAlign:'center' }}>
+                    <div style={{ width:'36px', height:'36px', border:'3px solid #FBCFE8', borderTopColor:'#E8528A', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto' }}></div>
                   </td>
                 </tr>
-              ) : logs.length === 0 ? (
+              )}
+
+              {!isLoading && logs.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                    No audit logs found.
+                  <td colSpan={5} style={{ padding:'48px', textAlign:'center', color:'#CBD5E0' }}>
+                    <Shield size={40} style={{ margin:'0 auto 12px' }}/>
+                    <p style={{ fontWeight:600, fontSize:'13px' }}>No audit logs found.</p>
                   </td>
                 </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-900">
-                          {format(new Date(log.created_at), 'dd MMM yyyy')}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {format(new Date(log.created_at), 'HH:mm:ss')}
-                        </span>
+              )}
+
+              {!isLoading && logs.map((log) => {
+                const style = getActionStyle(log.action);
+                return (
+                  <tr key={log.id} style={{ borderBottom:'1px solid #FFF0F5', transition:'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor='#FFF8FB'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor='transparent'}
+                  >
+                    {/* Timestamp */}
+                    <td style={{ padding:'16px 20px', whiteSpace:'nowrap' }}>
+                      <div style={{ fontWeight:700, color:'#1A202C', fontSize:'13px' }}>
+                        {format(new Date(log.created_at), 'dd MMM yyyy')}
+                      </div>
+                      <div style={{ fontSize:'11px', color:'#A0AEC0', marginTop:'2px', display:'flex', alignItems:'center', gap:'4px' }}>
+                        <Clock size={11}/> {format(new Date(log.created_at), 'HH:mm:ss')}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-gray-600" />
+
+                    {/* User */}
+                    <td style={{ padding:'16px 20px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                        <div style={{ width:'32px', height:'32px', borderRadius:'10px', backgroundColor:'#FFF0F5', display:'flex', alignItems:'center', justifyContent:'center', color:'#E8528A', flexShrink:0 }}>
+                          <User size={15}/>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-gray-900">{log.user_name || 'System'}</span>
-                          <span className="text-xs text-gray-500 capitalize">{log.user_role?.replace('_', ' ')}</span>
+                        <div>
+                          <div style={{ fontWeight:700, color:'#1A202C', fontSize:'13px' }}>{log.user_name || 'System'}</div>
+                          <div style={{ fontSize:'11px', color:'#A0AEC0', textTransform:'capitalize' }}>{log.user_role?.replace('_', ' ')}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getActionColor(log.action)}`}>
+
+                    {/* Action badge */}
+                    <td style={{ padding:'16px 20px' }}>
+                      <span style={{
+                        display:'inline-block', padding:'4px 12px',
+                        borderRadius:'20px', fontSize:'10px', fontWeight:800,
+                        textTransform:'uppercase', letterSpacing:'0.1em',
+                        backgroundColor:style.bg, color:style.color, border:`1px solid ${style.border}`
+                      }}>
                         {log.action.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+
+                    {/* Entity */}
+                    <td style={{ padding:'16px 20px', fontSize:'13px', color:'#4A5568', fontWeight:600, textTransform:'capitalize' }}>
                       {log.entity.replace('_', ' ')}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-xs text-gray-500 font-mono bg-gray-50 p-1.5 rounded">
+
+                    {/* Details */}
+                    <td style={{ padding:'16px 20px', maxWidth:'200px' }}>
+                      <code style={{
+                        display:'block', fontSize:'10px', color:'#718096',
+                        backgroundColor:'#FFF0F5', padding:'6px 10px',
+                        borderRadius:'8px', border:'1px solid #FFCCE0',
+                        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'
+                      }}>
                         {JSON.stringify(log.details)}
-                      </div>
+                      </code>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>

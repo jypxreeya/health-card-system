@@ -1,73 +1,103 @@
 import React from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, CreditCard, Building2, LogOut, Shield } from 'lucide-react';
+import { 
+  LayoutGrid, Building2, UserCircle2, Briefcase, 
+  Bell, Plus, BarChart2
+} from 'lucide-react';
 
 const AppLayout = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const navItems = [
-    { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
-    { name: 'Verify Card', path: '/verify-card', icon: <CreditCard size={20} /> },
-    { name: 'Register Patient', path: '/register', icon: <Users size={20} /> },
-    { name: 'Plans', path: '/plans', icon: <Building2 size={20} /> },
+  const topLinks = [
+    { name: 'Patient Portal', path: '/patient-dummy' },
+    { name: 'Sales App', path: '/sales-dummy' },
+    { name: 'Hospital Panel', path: '/' },
+  ];
+
+  const sideLinks = [
+    { name: 'Dashboard', path: '/analytics', icon: <BarChart2 size={17} /> },
+    { name: 'Hospital Panel', path: '/', icon: <LayoutGrid size={17} /> },
+    { name: 'Patient Portal', path: '/patient-dummy', icon: <UserCircle2 size={17} /> },
+    { name: 'Sales App', path: '/sales-dummy', icon: <Briefcase size={17} /> },
   ];
 
   if (['super_admin', 'admin'].includes(user?.role)) {
-    navItems.push({ name: 'Hospitals', path: '/hospitals', icon: <Building2 size={20} /> });
+    sideLinks.splice(2, 0, { name: 'Hospitals', path: '/hospitals', icon: <Building2 size={17} /> });
   }
 
-  if (user?.role === 'super_admin') {
-    navItems.push({ name: 'Audit Logs', path: '/audit-logs', icon: <Shield size={20} /> });
-  }
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
-    <div className="app-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div style={{ padding: '24px', borderBottom: '1px solid var(--border)' }}>
-          <h1 style={{ color: 'var(--primary)', fontSize: '20px', fontWeight: 900 }}>Namma Health</h1>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Admin Operations</p>
+    <div className="app-shell">
+
+      {/* ── TOP NAV ── */}
+      <header className="topnav">
+        <div className="topnav-brand">
+          <div className="topnav-cross">+</div>
+          <span className="topnav-title">Namma Health Card</span>
         </div>
-        <nav style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {navItems.map((item) => (
+
+        <nav className="topnav-links">
+          {topLinks.map(link => (
             <NavLink
-              key={item.name}
-              to={item.path}
-              style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                borderRadius: '8px', color: isActive ? 'var(--primary)' : 'var(--text-main)',
-                backgroundColor: isActive ? 'rgba(230, 29, 98, 0.05)' : 'transparent',
-                fontWeight: isActive ? 600 : 500,
-              })}
+              key={link.name}
+              to={link.path}
+              className={({ isActive }) => `topnav-link${isActive ? ' active' : ''}`}
             >
-              {item.icon}
-              {item.name}
+              {link.name}
             </NavLink>
           ))}
         </nav>
-        <div style={{ padding: '24px', borderTop: '1px solid var(--border)' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontWeight: 600, fontSize: '14px' }}>{user?.name}</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{user?.role.replace('_', ' ').toUpperCase()}</div>
-          </div>
-          <button onClick={logout} className="btn btn-outline" style={{ width: '100%', justifyContent: 'flex-start' }}>
-            <LogOut size={16} /> Logout
+
+        <div className="topnav-right">
+          <button className="topnav-icon-btn">
+            <Bell size={18} />
+          </button>
+          <button className="topnav-avatar" onClick={handleLogout} title="Click to logout">
+            {user?.name?.charAt(0) || 'A'}
           </button>
         </div>
-      </aside>
+      </header>
 
-      {/* Main content */}
-      <main className="main-content">
-        <header className="topbar">
-          <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-            {user?.hospital_name ? `Hospital: ${user.hospital_name}` : 'Central Administration'}
+      {/* ── BODY ── */}
+      <div className="app-body">
+
+        {/* SIDEBAR */}
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <div className="sidebar-title">Namma Health</div>
+            <div className="sidebar-sub">Medical Management</div>
           </div>
-        </header>
-        <div className="page-content">
+
+          <nav className="sidebar-nav">
+            {sideLinks.map(link => (
+              <NavLink
+                key={link.name}
+                to={link.path}
+                end={link.path === '/'}
+                className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+              >
+                {link.icon}
+                {link.name}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="sidebar-bottom">
+            <button className="sidebar-add-btn" onClick={() => navigate('/register')}>
+              <Plus size={16} />
+              Add New Record
+            </button>
+          </div>
+        </aside>
+
+        {/* MAIN */}
+        <main className="main-content">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };

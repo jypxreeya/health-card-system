@@ -4,260 +4,257 @@ import api from '../api/axios';
 import { toast } from 'react-hot-toast';
 import { UserPlus, Users, CreditCard, CheckCircle } from 'lucide-react';
 
+const STEPS = [
+  { num: 1, label: 'Primary Details', icon: UserPlus },
+  { num: 2, label: 'Select Plan',     icon: CreditCard },
+  { num: 3, label: 'Family Members',  icon: Users },
+  { num: 4, label: 'Completion',      icon: CheckCircle },
+];
+
 const PatientRegistration = () => {
   const [step, setStep] = useState(1);
   const queryClient = useQueryClient();
 
-  // Fetch active plans
   const { data: plansData } = useQuery({
     queryKey: ['plans'],
-    queryFn: async () => {
-      const res = await api.get('/plans');
-      return res.data;
-    }
+    queryFn: async () => { const res = await api.get('/plans'); return res.data; }
   });
   const plans = plansData?.data || [];
 
   const [formData, setFormData] = useState({
-    // Patient Details
-    full_name: '',
-    phone: '',
-    email: '',
-    gender: 'male',
-    date_of_birth: '',
-    address: '',
-    
-    // Plan Details
-    plan_id: '',
-    
-    // Family Members (Dynamic)
-    family_members: []
+    full_name: '', phone: '', email: '', gender: 'male',
+    date_of_birth: '', address: '', plan_id: '', family_members: []
   });
 
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const addFamilyMember = () => {
-    setFormData({
-      ...formData,
-      family_members: [
-        ...formData.family_members,
-        { name: '', relationship: '', gender: 'male', date_of_birth: '' }
-      ]
-    });
-  };
+  const addFamilyMember = () => setFormData({
+    ...formData,
+    family_members: [...formData.family_members, { name:'', relationship:'', gender:'male', date_of_birth:'' }]
+  });
 
   const updateFamilyMember = (index, field, value) => {
-    const newMembers = [...formData.family_members];
-    newMembers[index][field] = value;
-    setFormData({ ...formData, family_members: newMembers });
+    const m = [...formData.family_members];
+    m[index][field] = value;
+    setFormData({ ...formData, family_members: m });
   };
 
   const removeFamilyMember = (index) => {
-    const newMembers = [...formData.family_members];
-    newMembers.splice(index, 1);
-    setFormData({ ...formData, family_members: newMembers });
+    const m = [...formData.family_members];
+    m.splice(index, 1);
+    setFormData({ ...formData, family_members: m });
   };
 
   const registerMutation = useMutation({
-    mutationFn: async (data) => {
-      const res = await api.post('/patients', data);
-      return res.data;
-    },
-    onSuccess: (data) => {
-      toast.success('Patient registered and Health Card generated!');
-      setStep(4);
-      queryClient.invalidateQueries(['dashboard']);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Registration failed');
-    }
+    mutationFn: async (data) => { const res = await api.post('/patients', data); return res.data; },
+    onSuccess: () => { toast.success('Patient registered and Health Card generated!'); setStep(4); queryClient.invalidateQueries(['dashboard']); },
+    onError: (err) => toast.error(err.response?.data?.message || 'Registration failed')
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (step < 3) {
-      setStep(step + 1);
-    } else {
-      registerMutation.mutate(formData);
-    }
+    if (step < 3) setStep(step + 1);
+    else registerMutation.mutate(formData);
   };
 
-  const selectedPlan = plans.find(p => p.id === formData.plan_id);
+  /* ── INPUT STYLE ── */
+  const inp = {
+    width:'100%', padding:'11px 14px', border:'1px solid #E2E8F0',
+    borderRadius:'8px', fontSize:'14px', fontFamily:'Poppins,sans-serif',
+    color:'#1A202C', outline:'none', backgroundColor:'white',
+    boxSizing:'border-box'
+  };
+  const lbl = { display:'block', fontSize:'11px', fontWeight:700, color:'#A0AEC0', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'6px' };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Register New Patient</h1>
-        <p className="text-gray-500 mt-1">Issue a new Namma Health Card instantly.</p>
+    <div style={{ maxWidth:'860px', margin:'0 auto' }}>
+
+      {/* ── HEADER ── */}
+      <div style={{ marginBottom:'28px' }}>
+        <h1 style={{ fontSize:'22px', fontWeight:800, color:'#1A202C', letterSpacing:'-0.02em' }}>Register New Patient</h1>
+        <p style={{ fontSize:'13px', color:'#718096', marginTop:'4px', fontWeight:500 }}>Issue a new Namma Health Card instantly.</p>
       </div>
 
-      {/* Stepper */}
-      <div className="flex items-center justify-between mb-8">
-        {[
-          { num: 1, label: 'Primary Details', icon: UserPlus },
-          { num: 2, label: 'Select Plan', icon: CreditCard },
-          { num: 3, label: 'Family Members', icon: Users },
-          { num: 4, label: 'Completion', icon: CheckCircle },
-        ].map((s, idx) => (
-          <div key={idx} className={`flex flex-col items-center w-1/4 ${step >= s.num ? 'text-primary' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-              step > s.num ? 'bg-primary text-white' : 
-              step === s.num ? 'border-2 border-primary bg-primary/10 text-primary' : 
-              'bg-gray-100'
-            }`}>
-              <s.icon className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-medium uppercase tracking-wider text-center">{s.label}</span>
-          </div>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        {step === 1 && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold border-b pb-4">Primary Patient Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                <input required name="full_name" value={formData.full_name} onChange={handleInputChange} type="text" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                <input required name="phone" value={formData.phone} onChange={handleInputChange} type="tel" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input name="email" value={formData.email} onChange={handleInputChange} type="email" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                <input name="date_of_birth" value={formData.date_of_birth} onChange={handleInputChange} type="date" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                <select name="gender" value={formData.gender} onChange={handleInputChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none">
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Address</label>
-                <textarea name="address" value={formData.address} onChange={handleInputChange} rows="2" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none"></textarea>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold border-b pb-4">Select Membership Plan</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map((plan) => (
-                <div 
-                  key={plan.id}
-                  onClick={() => setFormData({ ...formData, plan_id: plan.id })}
-                  className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
-                    formData.plan_id === plan.id ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary/50'
-                  }`}
-                >
-                  <h3 className="text-lg font-bold">{plan.name}</h3>
-                  <p className="text-2xl font-bold text-primary mt-2">₹{plan.price}</p>
-                  <p className="text-sm text-gray-500 mt-1">Valid for {plan.validity_months} months</p>
-                  <ul className="mt-4 space-y-2">
-                    <li className="text-sm flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      Up to {plan.max_family_members} family members
-                    </li>
-                  </ul>
+      {/* ── STEPPER ── */}
+      <div style={{ display:'flex', alignItems:'center', marginBottom:'28px' }}>
+        {STEPS.map((s, idx) => {
+          const done = step > s.num, active = step === s.num;
+          return (
+            <React.Fragment key={s.num}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'8px' }}>
+                <div style={{
+                  width:'40px', height:'40px', borderRadius:'50%',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  backgroundColor: done ? '#E8528A' : active ? '#FFF0F5' : '#F7FAFC',
+                  border: active ? '2px solid #E8528A' : done ? 'none' : '2px solid #E2E8F0',
+                  color: done ? 'white' : active ? '#E8528A' : '#CBD5E0',
+                }}>
+                  <s.icon size={18}/>
                 </div>
-              ))}
-            </div>
-            {!formData.plan_id && <p className="text-red-500 text-sm">Please select a plan to continue.</p>}
-          </div>
-        )}
+                <span style={{ fontSize:'10px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color: active ? '#E8528A' : done ? '#4A5568' : '#CBD5E0', textAlign:'center', width:'80px' }}>
+                  {s.label}
+                </span>
+              </div>
+              {idx < STEPS.length - 1 && (
+                <div style={{ flex:1, height:'2px', backgroundColor: step > s.num ? '#E8528A' : '#EDF2F7', margin:'0 8px', marginBottom:'24px' }}/>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
 
-        {step === 3 && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center border-b pb-4">
-              <h2 className="text-xl font-bold">Add Family Members</h2>
-              <button type="button" onClick={addFamilyMember} className="text-primary font-medium flex items-center gap-1 hover:bg-primary/10 px-3 py-1 rounded-lg">
-                <UserPlus className="w-4 h-4" /> Add Member
-              </button>
-            </div>
-            
-            {formData.family_members.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No family members added. Click 'Add Member' to include family.</p>
-            ) : (
-              <div className="space-y-6">
-                {formData.family_members.map((member, idx) => (
-                  <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-100 relative">
-                    <button type="button" onClick={() => removeFamilyMember(idx)} className="absolute top-4 right-4 text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm text-gray-700 mb-1">Full Name</label>
-                        <input required value={member.name} onChange={(e) => updateFamilyMember(idx, 'name', e.target.value)} type="text" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-700 mb-1">Relationship</label>
-                        <input required value={member.relationship} onChange={(e) => updateFamilyMember(idx, 'relationship', e.target.value)} placeholder="e.g. Spouse, Son, Mother" type="text" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-700 mb-1">Gender</label>
-                        <select value={member.gender} onChange={(e) => updateFamilyMember(idx, 'gender', e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none">
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-700 mb-1">Date of Birth</label>
-                        <input value={member.date_of_birth} onChange={(e) => updateFamilyMember(idx, 'date_of_birth', e.target.value)} type="date" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-                      </div>
-                    </div>
+      {/* ── FORM CARD ── */}
+      <form onSubmit={handleSubmit}>
+        <div className="pink-card" style={{ padding:'32px' }}>
+
+          {/* STEP 1 */}
+          {step === 1 && (
+            <div>
+              <h2 style={{ fontSize:'16px', fontWeight:800, color:'#1A202C', marginBottom:'24px', paddingBottom:'16px', borderBottom:'1px solid #FFF0F5' }}>Primary Patient Details</h2>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px' }}>
+                {[
+                  { label:'Full Name *', name:'full_name', type:'text', required:true },
+                  { label:'Phone Number *', name:'phone', type:'tel', required:true },
+                  { label:'Email Address', name:'email', type:'email' },
+                  { label:'Date of Birth', name:'date_of_birth', type:'date' },
+                ].map(f => (
+                  <div key={f.name}>
+                    <label style={lbl}>{f.label}</label>
+                    <input required={f.required} name={f.name} type={f.type} value={formData[f.name]}
+                      onChange={handleInputChange} style={inp}/>
                   </div>
                 ))}
+                <div>
+                  <label style={lbl}>Gender</label>
+                  <select name="gender" value={formData.gender} onChange={handleInputChange} style={inp}>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn:'1 / -1' }}>
+                  <label style={lbl}>Full Address</label>
+                  <textarea name="address" value={formData.address} onChange={handleInputChange} rows="2"
+                    style={{ ...inp, resize:'none' }}/>
+                </div>
               </div>
-            )}
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="text-center py-12 space-y-4">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-10 h-10 text-green-500" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900">Registration Complete!</h2>
-            <p className="text-gray-500 max-w-md mx-auto">
-              The health card has been successfully generated. The PDF and welcome email have been sent to the patient.
-            </p>
-            <div className="pt-8">
-              <button type="button" onClick={() => { setStep(1); setFormData({ full_name: '', phone: '', email: '', gender: 'male', date_of_birth: '', address: '', plan_id: '', family_members: [] }); }} className="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-primary-hover">
+          )}
+
+          {/* STEP 2 */}
+          {step === 2 && (
+            <div>
+              <h2 style={{ fontSize:'16px', fontWeight:800, color:'#1A202C', marginBottom:'24px', paddingBottom:'16px', borderBottom:'1px solid #FFF0F5' }}>Select Membership Plan</h2>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:'16px' }}>
+                {plans.map(plan => {
+                  const selected = formData.plan_id === plan.id;
+                  return (
+                    <div key={plan.id} onClick={() => setFormData({...formData, plan_id:plan.id})}
+                      style={{
+                        padding:'24px', borderRadius:'16px', cursor:'pointer', transition:'all 0.2s',
+                        border: selected ? '2px solid #E8528A' : '2px solid #E2E8F0',
+                        backgroundColor: selected ? '#FFF0F5' : 'white',
+                        transform: selected ? 'translateY(-4px)' : 'none',
+                        boxShadow: selected ? '0 8px 20px rgba(232,82,138,0.15)' : 'none'
+                      }}>
+                      <h3 style={{ fontWeight:800, color:'#1A202C', fontSize:'15px' }}>{plan.name}</h3>
+                      <p style={{ fontSize:'26px', fontWeight:800, color:'#E8528A', margin:'8px 0 4px' }}>₹{plan.price}</p>
+                      <p style={{ fontSize:'12px', color:'#A0AEC0', fontWeight:500 }}>Valid {plan.validity_months} months</p>
+                      <div style={{ marginTop:'14px', display:'flex', alignItems:'center', gap:'6px', fontSize:'12px', color:'#4A5568', fontWeight:600 }}>
+                        <CheckCircle size={14} color="#48BB78"/> Up to {plan.max_family_members} family members
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {!formData.plan_id && <p style={{ color:'#E8528A', fontSize:'12px', fontWeight:600, marginTop:'12px' }}>Please select a plan to continue.</p>}
+            </div>
+          )}
+
+          {/* STEP 3 */}
+          {step === 3 && (
+            <div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px', paddingBottom:'16px', borderBottom:'1px solid #FFF0F5' }}>
+                <h2 style={{ fontSize:'16px', fontWeight:800, color:'#1A202C' }}>Add Family Members</h2>
+                <button type="button" onClick={addFamilyMember} className="btn-pink-outline" style={{ padding:'8px 16px', fontSize:'12px' }}>
+                  + Add Member
+                </button>
+              </div>
+              {formData.family_members.length === 0 ? (
+                <div style={{ textAlign:'center', padding:'48px 0', color:'#CBD5E0' }}>
+                  <Users size={40} style={{ margin:'0 auto 12px' }}/>
+                  <p style={{ fontWeight:600, fontSize:'13px' }}>No family members added yet.</p>
+                  <p style={{ fontSize:'12px', marginTop:'4px' }}>Click "Add Member" to include family.</p>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+                  {formData.family_members.map((m, idx) => (
+                    <div key={idx} style={{ padding:'20px', backgroundColor:'#FFF0F5', borderRadius:'12px', border:'1px solid #FFCCE0', position:'relative' }}>
+                      <button type="button" onClick={() => removeFamilyMember(idx)}
+                        style={{ position:'absolute', top:'14px', right:'16px', background:'none', border:'none', color:'#E8528A', fontWeight:700, fontSize:'12px', cursor:'pointer' }}>
+                        Remove
+                      </button>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
+                        {[
+                          { label:'Full Name', field:'name', type:'text' },
+                          { label:'Relationship', field:'relationship', type:'text', placeholder:'e.g. Spouse, Son' },
+                          { label:'Date of Birth', field:'date_of_birth', type:'date' },
+                        ].map(f => (
+                          <div key={f.field}>
+                            <label style={lbl}>{f.label}</label>
+                            <input type={f.type} placeholder={f.placeholder||''} value={m[f.field]}
+                              onChange={e => updateFamilyMember(idx, f.field, e.target.value)} style={inp}/>
+                          </div>
+                        ))}
+                        <div>
+                          <label style={lbl}>Gender</label>
+                          <select value={m.gender} onChange={e => updateFamilyMember(idx,'gender',e.target.value)} style={inp}>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 4 — SUCCESS */}
+          {step === 4 && (
+            <div style={{ textAlign:'center', padding:'40px 0' }}>
+              <div style={{ width:'80px', height:'80px', borderRadius:'50%', background:'linear-gradient(135deg, #E8528A, #F687B3)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 24px', boxShadow:'0 12px 32px rgba(232,82,138,0.3)' }}>
+                <CheckCircle size={40} color="white"/>
+              </div>
+              <h2 style={{ fontSize:'26px', fontWeight:800, color:'#1A202C' }}>Registration Complete!</h2>
+              <p style={{ color:'#718096', fontSize:'14px', maxWidth:'400px', margin:'12px auto 0', lineHeight:1.6 }}>
+                The health card has been generated and a welcome email has been sent to the patient.
+              </p>
+              <button type="button" className="btn-dark" style={{ marginTop:'32px' }}
+                onClick={() => { setStep(1); setFormData({ full_name:'', phone:'', email:'', gender:'male', date_of_birth:'', address:'', plan_id:'', family_members:[] }); }}>
                 Register Another Patient
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Navigation Buttons */}
-        {step < 4 && (
-          <div className="flex justify-between mt-8 pt-6 border-t">
-            {step > 1 ? (
-              <button type="button" onClick={() => setStep(step - 1)} className="px-6 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 font-medium">
-                Back
+          {/* NAV BUTTONS */}
+          {step < 4 && (
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:'32px', paddingTop:'20px', borderTop:'1px solid #FFF0F5' }}>
+              {step > 1 ? (
+                <button type="button" onClick={() => setStep(step-1)} className="btn-pink-outline">← Back</button>
+              ) : <div/>}
+              <button
+                type="submit"
+                disabled={registerMutation.isPending || (step===2 && !formData.plan_id)}
+                className="btn-dark"
+                style={{ opacity:(registerMutation.isPending||(step===2&&!formData.plan_id))?0.5:1 }}
+              >
+                {registerMutation.isPending ? 'Processing...' : step===3 ? 'Complete Registration' : 'Continue →'}
               </button>
-            ) : <div></div>}
-            
-            <button 
-              type="submit" 
-              disabled={registerMutation.isPending || (step === 2 && !formData.plan_id)}
-              className="px-8 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-hover disabled:opacity-50 flex items-center gap-2"
-            >
-              {registerMutation.isPending ? 'Processing...' : step === 3 ? 'Complete Registration' : 'Continue'}
-            </button>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </form>
     </div>
   );

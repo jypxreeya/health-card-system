@@ -5,6 +5,13 @@ import { CreditCard, CheckCircle, Plus, X, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
+const inp = {
+  width:'100%', padding:'11px 14px', border:'1px solid #E2E8F0',
+  borderRadius:'8px', fontSize:'14px', fontFamily:'Poppins,sans-serif',
+  color:'#1A202C', outline:'none', backgroundColor:'white', boxSizing:'border-box'
+};
+const lbl = { display:'block', fontSize:'11px', fontWeight:700, color:'#A0AEC0', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'6px' };
+
 const Plans = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -12,10 +19,7 @@ const Plans = () => {
 
   const { data: plansData, isLoading } = useQuery({
     queryKey: ['plans'],
-    queryFn: async () => {
-      const res = await api.get('/plans');
-      return res.data;
-    }
+    queryFn: async () => { const res = await api.get('/plans'); return res.data; }
   });
 
   const createPlanMutation = useMutation({
@@ -26,13 +30,10 @@ const Plans = () => {
       setIsModalOpen(false);
       reset();
     },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to create plan');
-    }
+    onError: (err) => toast.error(err.message || 'Failed to create plan')
   });
 
   const onSubmit = (data) => {
-    // Convert benefits string to array
     const benefitsArray = data.benefits ? data.benefits.split('\n').filter(b => b.trim() !== '') : [];
     createPlanMutation.mutate({
       ...data,
@@ -46,181 +47,153 @@ const Plans = () => {
   const plans = plansData?.data || [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div style={{ display:'flex', flexDirection:'column', gap:'24px' }}>
+
+      {/* ── HEADER ── */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Membership Plans</h1>
-          <p className="text-gray-500 mt-1">Manage active health card packages and pricing.</p>
+          <h1 style={{ fontSize:'22px', fontWeight:800, color:'#1A202C', letterSpacing:'-0.02em' }}>Membership Plans</h1>
+          <p style={{ fontSize:'13px', color:'#718096', marginTop:'4px', fontWeight:500 }}>Manage active health card packages and pricing.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Create New Plan
+        <button onClick={() => setIsModalOpen(true)} className="btn-dark" style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+          <Plus size={16}/> Create New Plan
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-12">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+      {/* ── LOADING ── */}
+      {isLoading && (
+        <div style={{ textAlign:'center', padding:'48px' }}>
+          <div style={{ width:'36px', height:'36px', border:'3px solid #FBCFE8', borderTopColor:'#E8528A', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto' }}></div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {plans.map((plan) => (
-            <div key={plan.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full hover:shadow-md transition-shadow relative overflow-hidden">
-              {/* Active Badge */}
-              <div className={`absolute top-0 right-0 px-4 py-1 text-xs font-bold uppercase tracking-wider text-white ${plan.is_active ? 'bg-green-500' : 'bg-red-500'}`}>
+      )}
+
+      {/* ── PLANS GRID ── */}
+      {!isLoading && (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px' }}>
+          {plans.map(plan => (
+            <div key={plan.id} className="pink-card"
+              style={{ display:'flex', flexDirection:'column', position:'relative', overflow:'hidden', padding:'28px',
+                transition:'transform 0.2s, box-shadow 0.2s', cursor:'default' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-5px)';e.currentTarget.style.boxShadow='0 14px 32px rgba(232,82,138,0.12)';}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='none';}}
+            >
+              {/* Active badge */}
+              <div style={{
+                position:'absolute', top:0, right:0,
+                padding:'4px 12px',
+                fontSize:'10px', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.1em',
+                backgroundColor: plan.is_active ? '#48BB78' : '#FC8181',
+                color:'white', borderRadius:'0 14px 0 12px'
+              }}>
                 {plan.is_active ? 'Active' : 'Inactive'}
               </div>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-                  <CreditCard className="w-6 h-6" />
+              {/* Icon + Name */}
+              <div style={{ display:'flex', alignItems:'center', gap:'14px', marginBottom:'20px' }}>
+                <div style={{ width:'48px', height:'48px', backgroundColor:'#FFF0F5', borderRadius:'14px', display:'flex', alignItems:'center', justifyContent:'center', color:'#E8528A' }}>
+                  <CreditCard size={22}/>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                  <p className="text-sm text-gray-500">Code: {plan.code}</p>
+                  <h3 style={{ fontSize:'16px', fontWeight:800, color:'#1A202C' }}>{plan.name}</h3>
+                  <p style={{ fontSize:'11px', color:'#A0AEC0', fontWeight:600, marginTop:'2px' }}>Code: {plan.code}</p>
                 </div>
               </div>
 
-              <div className="my-4">
-                <p className="text-4xl font-bold text-gray-900">₹{plan.price}</p>
-                <p className="text-sm text-gray-500 mt-1">Validity: {plan.validity_months} months</p>
+              {/* Price */}
+              <div style={{ marginBottom:'16px' }}>
+                <p style={{ fontSize:'36px', fontWeight:800, color:'#E8528A', letterSpacing:'-0.02em' }}>₹{plan.price}</p>
+                <p style={{ fontSize:'12px', color:'#A0AEC0', fontWeight:500, marginTop:'2px' }}>Validity: {plan.validity_months} months</p>
               </div>
 
-              <p className="text-gray-600 mb-6 text-sm flex-grow">
-                {plan.description || "Comprehensive health coverage for individuals and families."}
+              {/* Description */}
+              <p style={{ fontSize:'13px', color:'#718096', lineHeight:'1.6', marginBottom:'20px', flex:1 }}>
+                {plan.description || 'Comprehensive health coverage for individuals and families.'}
               </p>
 
-              <div className="border-t border-gray-100 pt-4 mb-6 space-y-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
-                  <span className="text-sm text-gray-700 font-medium">Covers {plan.max_family_members} family members</span>
+              {/* Benefits */}
+              <div style={{ borderTop:'1px solid #FFF0F5', paddingTop:'16px', marginBottom:'20px', display:'flex', flexDirection:'column', gap:'10px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <CheckCircle size={14} color="#48BB78"/>
+                  <span style={{ fontSize:'12px', color:'#4A5568', fontWeight:600 }}>Covers {plan.max_family_members} family members</span>
                 </div>
-                {plan.benefits?.map((benefit, idx) => (
-                  <div key={idx} className="flex items-start gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
-                    <span className="text-sm text-gray-700">{benefit}</span>
+                {plan.benefits?.map((b, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'8px' }}>
+                    <CheckCircle size={14} color="#48BB78" style={{ flexShrink:0, marginTop:'1px' }}/>
+                    <span style={{ fontSize:'12px', color:'#4A5568' }}>{b}</span>
                   </div>
                 ))}
               </div>
 
-              <button className="w-full mt-auto py-2 border border-gray-200 rounded-lg text-gray-600 font-medium hover:bg-gray-50 transition-colors">
-                Edit Plan
-              </button>
+              <button className="btn-pink-outline" style={{ width:'100%', fontSize:'12px' }}>Edit Plan</button>
             </div>
           ))}
+
+          {plans.length === 0 && !isLoading && (
+            <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'60px', color:'#CBD5E0' }}>
+              <CreditCard size={48} style={{ margin:'0 auto 16px' }}/>
+              <p style={{ fontWeight:700, fontSize:'14px' }}>No plans created yet.</p>
+              <p style={{ fontSize:'12px', marginTop:'4px' }}>Click "Create New Plan" to get started.</p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Create Plan Modal */}
+      {/* ── CREATE PLAN MODAL ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Create New Membership Plan</h2>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
+        <div style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50, padding:'16px' }}>
+          <div className="pink-card" style={{ width:'100%', maxWidth:'520px', padding:0, overflow:'hidden', maxHeight:'90vh', display:'flex', flexDirection:'column' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding:'20px 24px', borderBottom:'1px solid #FFCCE0', display:'flex', justifyContent:'space-between', alignItems:'center', backgroundColor:'#FFF0F5', flexShrink:0 }}>
+              <h2 style={{ fontSize:'16px', fontWeight:800, color:'#1A202C' }}>Create New Membership Plan</h2>
+              <button onClick={() => setIsModalOpen(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#A0AEC0', display:'flex' }}>
+                <X size={20}/>
               </button>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name</label>
-                  <input 
-                    {...register('name', { required: 'Name is required' })}
-                    placeholder="e.g. Platinum Family Care"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  />
-                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
-                </div>
+            <form onSubmit={handleSubmit(onSubmit)} style={{ padding:'24px', display:'flex', flexDirection:'column', gap:'16px', overflowY:'auto' }}>
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={lbl}>Plan Name *</label>
+                <input {...register('name', { required:'Name is required' })} placeholder="e.g. Platinum Family Care" style={inp}/>
+                {errors.name && <p style={{ color:'#E8528A', fontSize:'11px', marginTop:'4px' }}>{errors.name.message}</p>}
+              </div>
 
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Plan Code</label>
-                  <input 
-                    {...register('code', { required: 'Code is required' })}
-                    placeholder="e.g. PLAT01"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  />
-                  {errors.code && <p className="text-red-500 text-xs mt-1">{errors.code.message}</p>}
+                  <label style={lbl}>Plan Code *</label>
+                  <input {...register('code', { required:'Code is required' })} placeholder="e.g. PLAT01" style={inp}/>
+                  {errors.code && <p style={{ color:'#E8528A', fontSize:'11px', marginTop:'4px' }}>{errors.code.message}</p>}
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
-                  <input 
-                    type="number"
-                    {...register('price', { required: 'Price is required' })}
-                    placeholder="1999"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  />
-                  {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
+                  <label style={lbl}>Price (₹) *</label>
+                  <input type="number" {...register('price', { required:'Price is required' })} placeholder="1999" style={inp}/>
+                  {errors.price && <p style={{ color:'#E8528A', fontSize:'11px', marginTop:'4px' }}>{errors.price.message}</p>}
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Validity (Months)</label>
-                  <input 
-                    type="number"
-                    {...register('validity_months', { required: 'Validity is required' })}
-                    placeholder="12"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  />
+                  <label style={lbl}>Validity (Months)</label>
+                  <input type="number" {...register('validity_months', { required:true })} placeholder="12" style={inp}/>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Family Members</label>
-                  <input 
-                    type="number"
-                    {...register('max_family_members', { required: 'Max members is required' })}
-                    placeholder="4"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  />
+                  <label style={lbl}>Max Family Members</label>
+                  <input type="number" {...register('max_family_members', { required:true })} placeholder="4" style={inp}/>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea 
-                  {...register('description')}
-                  rows="2"
-                  placeholder="Plan summary..."
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none"
-                ></textarea>
+                <label style={lbl}>Description</label>
+                <textarea {...register('description')} rows="2" placeholder="Plan summary..." style={{ ...inp, resize:'none' }}/>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Benefits (One per line)</label>
-                <textarea 
-                  {...register('benefits')}
-                  rows="3"
-                  placeholder="Free OPD&#10;20% off Diagnostics&#10;Priority Booking"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none"
-                ></textarea>
+                <label style={lbl}>Benefits (One per line)</label>
+                <textarea {...register('benefits')} rows="4" placeholder={"Free OPD\n20% off Diagnostics\nPriority Booking"} style={{ ...inp, resize:'none' }}/>
               </div>
 
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  disabled={createPlanMutation.isPending}
-                  className="flex-1 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  {createPlanMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : 'Create Plan'}
+              <div style={{ display:'flex', gap:'12px', paddingTop:'4px' }}>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="btn-pink-outline" style={{ flex:1 }}>Cancel</button>
+                <button type="submit" disabled={createPlanMutation.isPending} className="btn-dark"
+                  style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', opacity:createPlanMutation.isPending?0.6:1 }}>
+                  {createPlanMutation.isPending ? <><Loader2 size={16} className="animate-spin"/> Creating...</> : 'Create Plan'}
                 </button>
               </div>
             </form>

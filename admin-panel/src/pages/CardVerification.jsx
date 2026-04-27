@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api/axios';
-import { Search, CheckCircle, XCircle, Clock, Plus, User, MapPin, Phone, Mail, Activity, CalendarDays, ShieldAlert } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, Plus, User, MapPin, Phone, Mail, Activity, CalendarDays, ShieldAlert, BadgeCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -10,15 +10,11 @@ const CardVerification = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogModal, setShowLogModal] = useState(false);
 
-  // Fetch card details
   const { data, isLoading, error } = useQuery({
     queryKey: ['card', searchQuery],
     queryFn: async () => {
       if (!searchQuery) return null;
-      // Note: axios interceptor already returns response.data (the JSON body)
-      // So `response` here is { success, data: {...card} }
       const term = searchQuery.trim();
-      // Phone numbers are all digits - don't uppercase them
       const searchParam = /^\d+$/.test(term) ? term : term.toUpperCase();
       const response = await api.get(`/cards/${encodeURIComponent(searchParam)}`);
       return response;
@@ -31,129 +27,129 @@ const CardVerification = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      setSearchQuery(searchTerm.trim());
-    }
+    if (searchTerm.trim()) setSearchQuery(searchTerm.trim());
+  };
+
+  /* ── status color helper ── */
+  const statusStyle = (status) => {
+    if (status === 'active')   return { bg:'#F0FFF4', color:'#22863A', border:'#C6F6D5' };
+    if (status === 'expired')  return { bg:'#FFF5F5', color:'#E53E3E', border:'#FEB2B2' };
+    return                            { bg:'#FFFBEB', color:'#D97706', border:'#FDE68A' };
   };
 
   return (
-    <div className="space-y-6">
+    <div style={{ display:'flex', flexDirection:'column', gap:'24px' }}>
+
+      {/* ── HEADER ── */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Verify Patient Card</h1>
-        <p className="text-gray-500 mt-1">Scan QR or enter card number / phone to view complete patient profile and log services.</p>
+        <h1 style={{ fontSize:'22px', fontWeight:800, color:'#1A202C', letterSpacing:'-0.02em' }}>Card Verification</h1>
+        <p style={{ fontSize:'13px', color:'#718096', marginTop:'4px', fontWeight:500 }}>
+          Search by card number or phone number to view patient profile and log services.
+        </p>
       </div>
 
-      {/* Search Bar */}
-      <form onSubmit={handleSearch} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4 items-center">
-        <div className="flex-1 w-full relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Enter Card Number (e.g., NHC-2026-00001) or Phone Number..."
-            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-colors"
-          />
+      {/* ── SEARCH BAR ── */}
+      <form onSubmit={handleSearch}>
+        <div className="pink-card" style={{ padding:'20px', display:'flex', gap:'12px', alignItems:'center' }}>
+          <div style={{ flex:1, position:'relative' }}>
+            <Search size={16} style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#CBD5E0' }}/>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Enter Card Number (NHC-2026-XXXXX) or Phone Number..."
+              className="form-input"
+              style={{ paddingLeft:'42px' }}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!searchTerm || isLoading}
+            className="btn-dark"
+            style={{ whiteSpace:'nowrap', opacity:(!searchTerm || isLoading) ? 0.5 : 1 }}
+          >
+            {isLoading ? 'Searching...' : 'Search Patient'}
+          </button>
         </div>
-        <button
-          type="submit"
-          disabled={!searchTerm || isLoading}
-          className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-primary/20"
-        >
-          {isLoading ? 'Searching...' : 'Search Patient'}
-        </button>
       </form>
 
-      {/* Loading State */}
+      {/* ── LOADING ── */}
       {isLoading && (
-        <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-500 mt-4 font-medium">Fetching patient records...</p>
+        <div className="pink-card" style={{ padding:'60px', textAlign:'center' }}>
+          <div style={{ width:'36px', height:'36px', border:'3px solid #FBCFE8', borderTopColor:'#E8528A', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 16px' }}></div>
+          <p style={{ color:'#A0AEC0', fontWeight:600, fontSize:'13px' }}>Fetching patient records...</p>
         </div>
       )}
 
-      {/* Error State */}
+      {/* ── ERROR ── */}
       {error && !isLoading && (
-        <div className="bg-red-50 border border-red-100 text-red-600 p-8 rounded-xl text-center">
-          <XCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
-          <h3 className="text-xl font-bold">No Records Found</h3>
-          <p className="mt-2 text-red-500">We couldn't find any patient matching that card number or phone number.</p>
+        <div className="pink-card" style={{ padding:'48px', textAlign:'center' }}>
+          <XCircle size={48} style={{ margin:'0 auto 16px', color:'#FEB2B2' }}/>
+          <h3 style={{ fontWeight:800, color:'#1A202C', fontSize:'16px' }}>No Records Found</h3>
+          <p style={{ color:'#A0AEC0', fontSize:'13px', marginTop:'6px' }}>
+            No patient matching that card number or phone number.
+          </p>
         </div>
       )}
 
-      {/* Results Section */}
+      {/* ── RESULTS ── */}
       {card && !isLoading && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          
-          {/* Left Column: Patient Identity & Address */}
-          <div className="xl:col-span-1 space-y-6">
-            
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:'20px' }}>
+
+          {/* ── LEFT: Profile ── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+
             {/* Profile Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative">
-              <div className="h-24 bg-gradient-to-br from-slate-800 to-slate-900"></div>
-              <div className="px-6 pb-6 relative">
-                <div className="w-20 h-20 bg-primary text-white rounded-2xl flex items-center justify-center text-3xl font-bold border-4 border-white shadow-md absolute -top-10 left-6">
+            <div className="pink-card" style={{ overflow:'hidden' }}>
+              <div style={{ height:'80px', background:'linear-gradient(135deg, #E8528A, #F687B3)' }}></div>
+              <div style={{ padding:'0 24px 24px', position:'relative' }}>
+                <div style={{
+                  width:'64px', height:'64px', borderRadius:'16px',
+                  background:'linear-gradient(135deg, #9B2C2C, #E8528A)',
+                  color:'white', fontWeight:800, fontSize:'26px',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  border:'4px solid white', position:'absolute', top:'-32px', left:'20px',
+                  boxShadow:'0 4px 12px rgba(232,82,138,0.3)'
+                }}>
                   {card.full_name?.charAt(0)}
                 </div>
-                
-                <div className="mt-14">
-                  <h2 className="text-2xl font-bold text-gray-900">{card.full_name}</h2>
-                  <div className="flex items-center gap-2 mt-1 text-gray-500 text-sm">
-                    <span className="capitalize">{card.gender || 'Not specified'}</span>
-                    <span>•</span>
-                    <span>{card.age ? `${card.age} years old` : 'Age unknown'}</span>
-                  </div>
+                <div style={{ marginTop:'40px' }}>
+                  <h2 style={{ fontSize:'18px', fontWeight:800, color:'#1A202C' }}>{card.full_name}</h2>
+                  <p style={{ fontSize:'12px', color:'#A0AEC0', marginTop:'2px', fontWeight:500, textTransform:'capitalize' }}>
+                    {card.gender || 'N/A'} • {card.age ? `${card.age} yrs` : 'Age unknown'}
+                  </p>
                 </div>
 
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center gap-3 text-gray-600">
-                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
-                      <Phone size={16} className="text-slate-400" />
-                    </div>
-                    <span className="font-medium">{card.phone}</span>
-                  </div>
-                  
-                  {card.email && (
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
-                        <Mail size={16} className="text-slate-400" />
+                <div style={{ marginTop:'20px', display:'flex', flexDirection:'column', gap:'12px' }}>
+                  {[
+                    { icon:<Phone size={14}/>, val:card.phone },
+                    card.email && { icon:<Mail size={14}/>, val:card.email },
+                    { icon:<MapPin size={14}/>, val:[card.address, card.area, card.city, card.state, card.pincode].filter(Boolean).join(', ') || 'No address' },
+                  ].filter(Boolean).map((item, i) => (
+                    <div key={i} style={{ display:'flex', gap:'10px', alignItems:'flex-start' }}>
+                      <div style={{ width:'28px', height:'28px', borderRadius:'8px', backgroundColor:'#FFF0F5', display:'flex', alignItems:'center', justifyContent:'center', color:'#E8528A', flexShrink:0 }}>
+                        {item.icon}
                       </div>
-                      <span className="font-medium">{card.email}</span>
+                      <span style={{ fontSize:'13px', color:'#4A5568', fontWeight:500, lineHeight:'1.5' }}>{item.val}</span>
                     </div>
-                  )}
-
-                  <div className="flex items-start gap-3 text-gray-600">
-                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0 mt-0.5">
-                      <MapPin size={16} className="text-slate-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm leading-relaxed">
-                        {card.address ? card.address : <span className="text-gray-400 italic">No address provided</span>}
-                      </p>
-                      {(card.area || card.city) && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {[card.area, card.city, card.state, card.pincode].filter(Boolean).join(', ')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
 
             {/* Family Members */}
-            {card.family_members && card.family_members.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Covered Family Members</h3>
-                <div className="space-y-3">
-                  {card.family_members.map((member, idx) => (
-                    <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0 last:pb-0">
+            {card.family_members?.length > 0 && (
+              <div className="pink-card" style={{ padding:'20px' }}>
+                <h3 style={{ fontSize:'11px', fontWeight:800, color:'#A0AEC0', textTransform:'uppercase', letterSpacing:'0.15em', marginBottom:'14px' }}>Covered Members</h3>
+                <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+                  {card.family_members.map((m, i) => (
+                    <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:i < card.family_members.length-1 ? '1px solid #FFF0F5' : 'none' }}>
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">{member.name}</p>
-                        <p className="text-xs text-gray-500 capitalize">{member.relationship}</p>
+                        <p style={{ fontWeight:700, color:'#1A202C', fontSize:'13px' }}>{m.name}</p>
+                        <p style={{ fontSize:'11px', color:'#A0AEC0', textTransform:'capitalize' }}>{m.relationship}</p>
                       </div>
-                      <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded">
-                        {member.age ? `${member.age} yrs` : '-'}
+                      <span style={{ fontSize:'11px', fontWeight:700, backgroundColor:'#FFF0F5', color:'#E8528A', padding:'3px 10px', borderRadius:'20px', border:'1px solid #FFCCE0' }}>
+                        {m.age ? `${m.age} yrs` : '—'}
                       </span>
                     </div>
                   ))}
@@ -162,137 +158,118 @@ const CardVerification = () => {
             )}
           </div>
 
-          {/* Right Column: Health Card & Actions */}
-          <div className="xl:col-span-2 space-y-6">
-            
-            {/* The Health Card UI */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              {/* Card Banner */}
-              <div className={`p-5 flex items-center justify-between text-white ${
-                card.status === 'active' ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 
-                card.status === 'expired' ? 'bg-gradient-to-r from-red-500 to-rose-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'
-              }`}>
-                <div className="flex items-center gap-3">
-                  {card.status === 'active' ? <CheckCircle className="w-6 h-6" /> : 
-                   card.status === 'expired' ? <Clock className="w-6 h-6" /> : <ShieldAlert className="w-6 h-6" />}
+          {/* ── RIGHT: Card Details ── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+
+            {/* Status Banner */}
+            <div className="pink-card" style={{ overflow:'hidden', padding:0 }}>
+              <div style={{
+                padding:'16px 24px', display:'flex', justifyContent:'space-between', alignItems:'center',
+                background: card.status==='active' ? 'linear-gradient(135deg, #E8528A, #F687B3)' :
+                            card.status==='expired' ? 'linear-gradient(135deg, #E53E3E, #FC8181)' :
+                                                      'linear-gradient(135deg, #D97706, #FBBF24)',
+                color:'white'
+              }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                  {card.status==='active' ? <CheckCircle size={22}/> : card.status==='expired' ? <Clock size={22}/> : <ShieldAlert size={22}/>}
                   <div>
-                    <span className="font-bold uppercase tracking-widest block text-sm">
-                      {card.status} MEMBERSHIP
-                    </span>
-                    <span className="text-white/80 text-xs">Present this card to avail benefits</span>
+                    <div style={{ fontWeight:800, fontSize:'13px', textTransform:'uppercase', letterSpacing:'0.1em' }}>
+                      {card.status} Membership
+                    </div>
+                    <div style={{ fontSize:'11px', opacity:0.85 }}>Present this card to avail benefits</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-mono text-2xl font-bold tracking-tight bg-black/20 px-3 py-1 rounded-lg">
-                    {card.card_number}
-                  </span>
-                </div>
+                <span style={{ fontFamily:'monospace', fontSize:'16px', fontWeight:800, backgroundColor:'rgba(0,0,0,0.15)', padding:'6px 14px', borderRadius:'10px' }}>
+                  {card.card_number}
+                </span>
               </div>
-              
-              <div className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-1">Current Plan</p>
-                    <p className="font-bold text-gray-900">{card.plan_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-1">Plan Code</p>
-                    <p className="font-bold text-gray-900">{card.plan_code}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-1">Valid From</p>
-                    <p className="font-bold text-gray-900">{format(new Date(card.valid_from), 'MMM dd, yyyy')}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mb-1">Valid Until</p>
-                    <p className={`font-bold ${card.status === 'expired' ? 'text-red-500' : 'text-gray-900'}`}>
-                      {format(new Date(card.valid_until), 'MMM dd, yyyy')}
-                    </p>
-                  </div>
+
+              <div style={{ padding:'24px' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'20px' }}>
+                  {[
+                    { label:'Plan', val:card.plan_name },
+                    { label:'Plan Code', val:card.plan_code },
+                    { label:'Valid From', val:format(new Date(card.valid_from), 'MMM dd, yyyy') },
+                    { label:'Valid Until', val:format(new Date(card.valid_until), 'MMM dd, yyyy') },
+                  ].map((item,i) => (
+                    <div key={i}>
+                      <p style={{ fontSize:'10px', fontWeight:700, color:'#A0AEC0', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'4px' }}>{item.label}</p>
+                      <p style={{ fontWeight:700, color:item.label==='Valid Until'&&card.status==='expired' ? '#E53E3E' : '#1A202C', fontSize:'13px' }}>{item.val}</p>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Plan Benefits */}
-                <div className="mt-8 border-t border-gray-100 pt-6">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Activity size={18} className="text-primary" /> Active Plan Benefits
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {card.benefits?.map((benefit, idx) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                        <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span className="text-sm text-slate-700 font-medium">{benefit}</span>
-                      </div>
-                    ))}
+                {/* Benefits */}
+                {card.benefits?.length > 0 && (
+                  <div style={{ marginTop:'24px', borderTop:'1px solid #FFF0F5', paddingTop:'20px' }}>
+                    <h3 style={{ fontSize:'11px', fontWeight:800, color:'#A0AEC0', textTransform:'uppercase', letterSpacing:'0.15em', marginBottom:'12px', display:'flex', alignItems:'center', gap:'6px' }}>
+                      <Activity size={14} color="#E8528A"/> Plan Benefits
+                    </h3>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'8px' }}>
+                      {card.benefits.map((b, i) => (
+                        <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'8px', padding:'10px 12px', backgroundColor:'#FFF0F5', borderRadius:'10px', border:'1px solid #FFCCE0' }}>
+                          <CheckCircle size={14} style={{ color:'#E8528A', flexShrink:0, marginTop:'1px' }}/>
+                          <span style={{ fontSize:'12px', color:'#4A5568', fontWeight:600 }}>{b}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Action Bar */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between">
+            {/* Log Service Action */}
+            <div className="pink-card" style={{ padding:'20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div>
-                <h3 className="font-bold text-gray-900">Hospital Services</h3>
-                <p className="text-sm text-gray-500 mt-1">Record a visit and apply membership discounts.</p>
+                <h3 style={{ fontWeight:700, color:'#1A202C', fontSize:'15px' }}>Log Hospital Service</h3>
+                <p style={{ fontSize:'12px', color:'#A0AEC0', marginTop:'3px' }}>Record a visit and apply membership discounts.</p>
               </div>
               <button
                 onClick={() => setShowLogModal(true)}
                 disabled={card.status !== 'active'}
-                className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed shadow-sm shadow-primary/20"
+                className="btn-dark"
+                style={{ display:'flex', alignItems:'center', gap:'8px', opacity:card.status!=='active'?0.4:1 }}
               >
-                <Plus className="w-5 h-5" />
-                Log Service & Discount
+                <Plus size={16}/> Log Service & Discount
               </button>
             </div>
 
-            {/* Recent Services History */}
-            {card.recent_services && card.recent_services.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-                  <CalendarDays size={18} className="text-slate-400" />
-                  <h3 className="font-bold text-gray-900">Recent Services Used</h3>
+            {/* Recent Services */}
+            {card.recent_services?.length > 0 && (
+              <div className="pink-card" style={{ overflow:'hidden', padding:0 }}>
+                <div style={{ padding:'16px 20px', borderBottom:'1px solid #FFCCE0', display:'flex', alignItems:'center', gap:'8px' }}>
+                  <CalendarDays size={16} color="#E8528A"/>
+                  <h3 style={{ fontWeight:700, color:'#1A202C', fontSize:'14px' }}>Recent Services Used</h3>
                 </div>
-                <div className="divide-y divide-gray-50">
-                  {card.recent_services.map((service, idx) => (
-                    <div key={idx} className="p-4 hover:bg-slate-50 transition-colors flex justify-between items-center">
-                      <div>
-                        <p className="font-bold text-gray-900 text-sm">{service.service_type}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{service.hospital_name} • {format(new Date(service.visit_date), 'dd MMM yyyy')}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-emerald-600 text-sm">Saved ₹{service.discount_amount}</p>
-                        <p className="text-xs text-gray-400 mt-0.5 line-through">Bill: ₹{service.original_amount}</p>
-                      </div>
+                {card.recent_services.map((svc, i) => (
+                  <div key={i} style={{ padding:'14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:i<card.recent_services.length-1?'1px solid #FFF0F5':'none' }}>
+                    <div>
+                      <p style={{ fontWeight:700, color:'#1A202C', fontSize:'13px' }}>{svc.service_type}</p>
+                      <p style={{ fontSize:'11px', color:'#A0AEC0', marginTop:'2px' }}>{svc.hospital_name} • {format(new Date(svc.visit_date), 'dd MMM yyyy')}</p>
                     </div>
-                  ))}
-                </div>
+                    <div style={{ textAlign:'right' }}>
+                      <p style={{ fontWeight:800, color:'#48BB78', fontSize:'14px' }}>Saved ₹{svc.discount_amount}</p>
+                      <p style={{ fontSize:'11px', color:'#CBD5E0', textDecoration:'line-through' }}>₹{svc.original_amount}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-
         </div>
       )}
 
-      {/* Log Service Modal */}
+      {/* ── LOG SERVICE MODAL ── */}
       {showLogModal && card && (
-        <LogServiceModal 
-          card={card} 
-          onClose={() => setShowLogModal(false)} 
-        />
+        <LogServiceModal card={card} onClose={() => setShowLogModal(false)} />
       )}
     </div>
   );
 };
 
-// ... existing LogServiceModal code ...
+/* ── LOG SERVICE MODAL ── */
 const LogServiceModal = ({ card, onClose }) => {
-  const [formData, setFormData] = useState({
-    service_type: '',
-    department: '',
-    original_amount: '',
-    discount_amount: '',
-    notes: ''
-  });
-
+  const [formData, setFormData] = useState({ service_type:'', department:'', original_amount:'', discount_amount:'', notes:'' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -319,100 +296,64 @@ const LogServiceModal = ({ card, onClose }) => {
   const finalAmount = Number(formData.original_amount || 0) - Number(formData.discount_amount || 0);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+    <div style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50, padding:'16px' }}>
+      <div className="pink-card" style={{ width:'100%', maxWidth:'520px', padding:0, overflow:'hidden' }}>
+        
+        {/* Modal Header */}
+        <div style={{ padding:'20px 24px', borderBottom:'1px solid #FFCCE0', display:'flex', justifyContent:'space-between', alignItems:'center', backgroundColor:'#FFF0F5' }}>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Log Hospital Service</h2>
-            <p className="text-xs text-slate-500 mt-1">For patient: <span className="font-semibold text-slate-700">{card.full_name}</span></p>
+            <h2 style={{ fontSize:'16px', fontWeight:800, color:'#1A202C' }}>Log Hospital Service</h2>
+            <p style={{ fontSize:'12px', color:'#A0AEC0', marginTop:'2px' }}>Patient: <strong style={{color:'#E8528A'}}>{card.full_name}</strong></p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 shadow-sm border border-gray-100">
-            <XCircle className="w-6 h-6" />
+          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'#A0AEC0' }}>
+            <XCircle size={22}/>
           </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 sm:col-span-1">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Service Type *</label>
-              <input
-                required
-                type="text"
-                placeholder="e.g. OPD Consultation"
-                value={formData.service_type}
-                onChange={(e) => setFormData({...formData, service_type: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:outline-none transition-all"
-              />
+
+        <form onSubmit={handleSubmit} style={{ padding:'24px', display:'flex', flexDirection:'column', gap:'16px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
+            <div>
+              <label className="form-label">Service Type *</label>
+              <input required type="text" placeholder="e.g. OPD Consultation" className="form-input"
+                value={formData.service_type} onChange={e=>setFormData({...formData,service_type:e.target.value})}/>
             </div>
-            <div className="col-span-2 sm:col-span-1">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Department</label>
-              <input
-                type="text"
-                placeholder="e.g. Cardiology"
-                value={formData.department}
-                onChange={(e) => setFormData({...formData, department: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:outline-none transition-all"
-              />
+            <div>
+              <label className="form-label">Department</label>
+              <input type="text" placeholder="e.g. Cardiology" className="form-input"
+                value={formData.department} onChange={e=>setFormData({...formData,department:e.target.value})}/>
+            </div>
+            <div>
+              <label className="form-label">Original Bill (₹) *</label>
+              <input required type="number" min="0" placeholder="0.00" className="form-input"
+                style={{ fontFamily:'monospace', fontSize:'16px', fontWeight:700 }}
+                value={formData.original_amount} onChange={e=>setFormData({...formData,original_amount:e.target.value})}/>
+            </div>
+            <div>
+              <label className="form-label" style={{color:'#48BB78'}}>Discount Amount (₹) *</label>
+              <input required type="number" min="0" placeholder="0.00" className="form-input"
+                style={{ fontFamily:'monospace', fontSize:'16px', fontWeight:700, borderColor:'#C6F6D5', backgroundColor:'#F0FFF4', color:'#22863A' }}
+                value={formData.discount_amount} onChange={e=>setFormData({...formData,discount_amount:e.target.value})}/>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Original Bill (₹) *</label>
-              <input
-                required
-                type="number"
-                min="0"
-                placeholder="0.00"
-                value={formData.original_amount}
-                onChange={(e) => setFormData({...formData, original_amount: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:outline-none transition-all font-mono text-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-emerald-700 uppercase tracking-wide mb-1.5">Membership Discount (₹) *</label>
-              <input
-                required
-                type="number"
-                min="0"
-                placeholder="0.00"
-                value={formData.discount_amount}
-                onChange={(e) => setFormData({...formData, discount_amount: e.target.value})}
-                className="w-full px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition-all font-mono text-lg text-emerald-700"
-              />
-            </div>
-          </div>
-
-          <div className="bg-slate-900 text-white p-5 rounded-xl flex justify-between items-center shadow-inner">
-            <span className="font-medium text-slate-300">Final Amount to Pay:</span>
-            <span className="text-3xl font-bold tracking-tight">₹{finalAmount > 0 ? finalAmount : 0}</span>
+          {/* Final Amount Display */}
+          <div style={{ backgroundColor:'#1A202C', borderRadius:'12px', padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ color:'#A0AEC0', fontWeight:600, fontSize:'13px' }}>Final Amount Payable:</span>
+            <span style={{ color:'white', fontWeight:800, fontSize:'26px', letterSpacing:'-0.02em' }}>₹{finalAmount > 0 ? finalAmount : 0}</span>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Doctor / Notes (Optional)</label>
-            <textarea
-              rows="2"
-              placeholder="Add any specific notes or doctor name..."
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:outline-none transition-all resize-none"
-            ></textarea>
+            <label className="form-label">Notes (Optional)</label>
+            <textarea rows="2" placeholder="Doctor name or any notes..." className="form-input"
+              style={{ resize:'none' }}
+              value={formData.notes} onChange={e=>setFormData({...formData,notes:e.target.value})}/>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 px-4 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-transform active:scale-95 disabled:opacity-50 flex justify-center items-center gap-2 shadow-md shadow-primary/20"
-            >
-              {isSubmitting ? <Activity className="animate-spin" size={20} /> : <CheckCircle size={20} />}
+          <div style={{ display:'flex', gap:'12px', paddingTop:'4px' }}>
+            <button type="button" onClick={onClose} className="btn-pink-outline" style={{ flex:1 }}>Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="btn-dark"
+              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', opacity:isSubmitting?0.6:1 }}>
+              {isSubmitting ? <Activity size={16} className="animate-spin"/> : <CheckCircle size={16}/>}
               {isSubmitting ? 'Processing...' : 'Confirm & Log Service'}
             </button>
           </div>
